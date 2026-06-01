@@ -56,6 +56,7 @@ const ADMIN_ITEM = {
 export function AppSidebar() {
   const t = useTranslations("nav");
   const tAuth = useTranslations("auth");
+  const tRoles = useTranslations("settings.roles");
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
@@ -89,20 +90,27 @@ export function AppSidebar() {
         .toUpperCase()
     : "DC";
 
+  const clinicName =
+    locale === "ar" && clinic?.name_ar ? clinic.name_ar : clinic?.name ?? tAuth("brand_title");
+
+  const roleLabel = profile?.role ? tRoles(profile.role) : "";
+
   return (
-    <Sidebar side={locale === "ar" ? "right" : "left"} dir={locale === "ar" ? "rtl" : "ltr"}>
+    <Sidebar
+      key={locale}
+      side={locale === "ar" ? "right" : "left"}
+      dir={locale === "ar" ? "rtl" : "ltr"}
+    >
       <SidebarHeader className="p-4">
         <Link href={`/${locale}/dashboard`} className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-            {clinic?.name?.slice(0, 2).toUpperCase() ?? "DC"}
+            {clinicName.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-sidebar-foreground truncate max-w-[140px]">
-              {clinic?.name ?? "Dental Clinic"}
+            <span className="max-w-[140px] truncate text-sm font-semibold text-sidebar-foreground">
+              {clinicName}
             </span>
-            <span className="text-xs text-sidebar-foreground/60">
-              {profile?.role?.replace("_", " ") ?? ""}
-            </span>
+            <span className="text-xs text-sidebar-foreground/60">{roleLabel}</span>
           </div>
         </Link>
       </SidebarHeader>
@@ -111,7 +119,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t("dashboard")}</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("menu")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV_ITEMS.map((item) => (
@@ -119,9 +127,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     isActive={isActive(item.href)}
                     tooltip={t(item.key)}
-                    render={
-                      <Link href={`/${locale}${item.href}`} />
-                    }
+                    render={<Link href={`/${locale}${item.href}`} />}
                   >
                     <item.icon className="size-4" />
                     <span>{t(item.key)}</span>
@@ -134,9 +140,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     isActive={isActive(ADMIN_ITEM.href)}
                     tooltip={t(ADMIN_ITEM.key)}
-                    render={
-                      <Link href={`/${locale}${ADMIN_ITEM.href}`} />
-                    }
+                    render={<Link href={`/${locale}${ADMIN_ITEM.href}`} />}
                   >
                     <ADMIN_ITEM.icon className="size-4" />
                     <span>{t(ADMIN_ITEM.key)}</span>
@@ -167,20 +171,13 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={
-                  <SidebarMenuButton
-                    size="lg"
-                    className="w-full"
-                  />
-                }
+                render={<SidebarMenuButton size="lg" className="w-full" />}
               >
                 <Avatar size="sm">
                   {profile?.avatar_url && (
                     <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
                   )}
-                  <AvatarFallback className="text-xs">
-                    {initials}
-                  </AvatarFallback>
+                  <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-1 flex-col text-start text-sm leading-tight">
                   <span className="truncate font-medium">
@@ -193,14 +190,8 @@ export function AppSidebar() {
                 <ChevronUp className="ms-auto size-4" />
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent
-                side="top"
-                align="start"
-                className="w-56"
-              >
-                <DropdownMenuItem
-                  onClick={() => router.push(`/${locale}/settings`)}
-                >
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuItem onClick={() => router.push(`/${locale}/settings`)}>
                   <Settings className="size-4" />
                   {t("settings")}
                 </DropdownMenuItem>

@@ -4,6 +4,8 @@ import { updateSession } from '@/lib/supabase/middleware'
 const locales = ['en', 'ar']
 const defaultLocale = 'en'
 
+const AUTH_PATHS = new Set(['/', '/login', '/register', '/verify-email'])
+
 function getLocale(pathname: string): string | null {
   const segments = pathname.split('/')
   const maybeLocale = segments[1]
@@ -18,7 +20,7 @@ function stripLocale(pathname: string, locale: string): string {
 }
 
 export async function middleware(request: NextRequest) {
-  const supabaseResponse = await updateSession(request)
+  const { response: supabaseResponse, user } = await updateSession(request)
 
   const { pathname } = request.nextUrl
   const locale = getLocale(pathname) ?? defaultLocale
@@ -26,28 +28,36 @@ export async function middleware(request: NextRequest) {
     ? stripLocale(pathname, locale)
     : pathname
 
-  const hasSession = supabaseResponse.headers
-    .getSetCookie()
-    .some((c) => c.includes('sb-') && c.includes('auth-token'))
+  const isAuthPath = AUTH_PATHS.has(pathWithoutLocale)
+  const isProtectedPath =
+    !isAuthPath && !pathWithoutLocale.startsWith('/api')
+  const isVerified = Boolean(user?.email_confirmed_at)
 
-  const allCookies = request.cookies.getAll()
-  const hasAuthCookie = allCookies.some(
-    (c) => c.name.includes('sb-') && c.name.includes('auth-token'),
-  )
-
-  const isAuthenticated = hasSession || hasAuthCookie
-
-  const isLoginPage =
-    pathWithoutLocale === '/login' || pathWithoutLocale === '/'
-  const isDashboardPage = pathWithoutLocale.startsWith('/dashboard')
-
-  if (!isAuthenticated && isDashboardPage) {
+  if (pathWithoutLocale === '/verify-email' && !user) {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
     return NextResponse.redirect(url)
   }
 
-  if (isAuthenticated && isLoginPage) {
+  if (user && !isVerified && isProtectedPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/verify-email`
+    return NextResponse.redirect(url)
+  }
+
+  if (!user && isProtectedPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/login`
+    return NextResponse.redirect(url)
+  }
+
+  if (
+    user &&
+    isVerified &&
+    (pathWithoutLocale === '/login' ||
+      pathWithoutLocale === '/register' ||
+      pathWithoutLocale === '/')
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/dashboard`
     return NextResponse.redirect(url)

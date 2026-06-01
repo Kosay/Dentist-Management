@@ -44,7 +44,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={dir} className={`${inter.variable} ${notoSansArabic.variable} h-full antialiased`}>
       <body className={`${fontClass} min-h-full flex flex-col`}>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
           {children}
           <Toaster position={dir === 'rtl' ? 'top-left' : 'top-right'} dir={dir} />
         </NextIntlClientProvider>

@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { getSiteUrl } from '@/lib/site-url'
 import type { UserRole, Json, SubscriptionStatus } from '@/types/database'
 
 export interface Profile {
@@ -52,6 +53,7 @@ interface SignUpParams {
   password: string
   full_name: string
   clinic_name: string
+  locale: string
 }
 
 interface AuthState {
@@ -59,7 +61,7 @@ interface AuthState {
   profile: Profile | null
   clinic: Clinic | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<User>
   signUp: (params: SignUpParams) => Promise<void>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -130,18 +132,27 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchProfileAndClinic])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) throw error
+    if (!data.user) throw new Error('Unable to sign in')
+    return data.user
   }
 
-  const signUp = async ({ email, password, full_name, clinic_name }: SignUpParams) => {
+  const signUp = async ({
+    email,
+    password,
+    full_name,
+    clinic_name,
+    locale,
+  }: SignUpParams) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: `${getSiteUrl()}/api/auth/callback?next=/${locale}/dashboard`,
         data: {
           full_name,
           clinic_name,

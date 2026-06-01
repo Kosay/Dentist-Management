@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -11,16 +10,13 @@ import { Loader2 } from "lucide-react";
 import { loginSchema, type Login } from "@/lib/validations";
 import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AuthBrand,
+  AuthCard,
+  AuthFooterLink,
+} from "@/components/auth/auth-shell";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -40,7 +36,13 @@ export default function LoginPage() {
   const onSubmit = async (data: Login) => {
     try {
       setError(null);
-      await signIn(data.email, data.password);
+      const user = await signIn(data.email, data.password);
+
+      if (!user.email_confirmed_at) {
+        router.push(`/${locale}/verify-email`);
+        return;
+      }
+
       router.push(`/${locale}/dashboard`);
     } catch {
       setError(t("invalid_credentials"));
@@ -48,37 +50,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="text-center">
-        <div className="mb-4 flex items-center justify-center">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500 text-xl font-bold text-white shadow-lg shadow-blue-500/30">
-            DC
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-white">Dental Clinic</h1>
-        <p className="mt-1 text-sm text-blue-200/70">
-          Management Platform
-        </p>
-      </div>
+    <div className="flex flex-col items-center gap-8">
+      <AuthBrand />
 
-      <Card className="w-full border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-xl text-white">{t("sign_in_title")}</CardTitle>
-          <CardDescription className="text-blue-200/60">
-            {t("email")} & {t("password")}
-          </CardDescription>
-        </CardHeader>
+      <AuthCard title={t("sign_in_title")} description={t("sign_in_subtitle")}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-blue-100/80">
+              <Label htmlFor="email" className="text-slate-700">
                 {t("email")}
               </Label>
               <Input
@@ -86,18 +71,16 @@ export default function LoginPage() {
                 type="email"
                 placeholder="doctor@clinic.com"
                 autoComplete="email"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("email")}
               />
-              {errors.email && (
-                <p className="text-xs text-red-400">
-                  {errors.email.message}
-                </p>
-              )}
+              {errors.email ? (
+                <p className="text-xs text-red-600">{errors.email.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-blue-100/80">
+              <Label htmlFor="password" className="text-slate-700">
                 {t("password")}
               </Label>
               <Input
@@ -105,21 +88,19 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("password")}
               />
-              {errors.password && (
-                <p className="text-xs text-red-400">
-                  {errors.password.message}
-                </p>
-              )}
+              {errors.password ? (
+                <p className="text-xs text-red-600">{errors.password.message}</p>
+              ) : null}
             </div>
-          </CardContent>
+          </div>
 
-          <CardFooter className="flex flex-col gap-4">
+          <div className="space-y-4 border-t border-slate-100 pt-6">
             <Button
               type="submit"
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              className="h-11 w-full bg-teal-600 text-white hover:bg-teal-700"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -132,18 +113,14 @@ export default function LoginPage() {
               )}
             </Button>
 
-            <p className="text-center text-sm text-blue-200/60">
-              {t("no_account")}{" "}
-              <Link
-                href={`/${locale}/register`}
-                className="font-medium text-blue-400 hover:text-blue-300 hover:underline"
-              >
-                {t("sign_up")}
-              </Link>
-            </p>
-          </CardFooter>
+            <AuthFooterLink
+              prompt={t("no_account")}
+              href={`/${locale}/register`}
+              label={t("sign_up")}
+            />
+          </div>
         </form>
-      </Card>
+      </AuthCard>
     </div>
   );
 }

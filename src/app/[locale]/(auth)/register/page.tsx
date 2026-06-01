@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -11,16 +10,13 @@ import { Loader2 } from "lucide-react";
 import { registerSchema, type Register } from "@/lib/validations";
 import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AuthBrand,
+  AuthCard,
+  AuthFooterLink,
+} from "@/components/auth/auth-shell";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -45,66 +41,48 @@ export default function RegisterPage() {
         password: data.password,
         full_name: data.full_name,
         clinic_name: data.clinic_name,
+        locale,
       });
-      router.push(`/${locale}/dashboard`);
+      router.push(`/${locale}/verify-email`);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Registration failed. Please try again.",
+        err instanceof Error ? err.message : t("registration_failed"),
       );
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="text-center">
-        <div className="mb-4 flex items-center justify-center">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500 text-xl font-bold text-white shadow-lg shadow-blue-500/30">
-            DC
-          </div>
-        </div>
-        <h1 className="text-2xl font-bold text-white">Dental Clinic</h1>
-        <p className="mt-1 text-sm text-blue-200/70">
-          Management Platform
-        </p>
-      </div>
+    <div className="flex flex-col items-center gap-8">
+      <AuthBrand />
 
-      <Card className="w-full border-white/10 bg-white/5 shadow-2xl backdrop-blur-xl">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-xl text-white">{t("sign_up_title")}</CardTitle>
-          <CardDescription className="text-blue-200/60">
-            {t("sign_up")}
-          </CardDescription>
-        </CardHeader>
+      <AuthCard title={t("sign_up_title")} description={t("sign_up_subtitle")}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {error ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
+          <div className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="full_name" className="text-blue-100/80">
-                {t("sign_up") === "Sign Up" ? "Full Name" : "الاسم الكامل"}
+              <Label htmlFor="full_name" className="text-slate-700">
+                {t("full_name")}
               </Label>
               <Input
                 id="full_name"
                 type="text"
                 placeholder="Dr. John Smith"
                 autoComplete="name"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("full_name")}
               />
-              {errors.full_name && (
-                <p className="text-xs text-red-400">
-                  {errors.full_name.message}
-                </p>
-              )}
+              {errors.full_name ? (
+                <p className="text-xs text-red-600">{errors.full_name.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-blue-100/80">
+              <Label htmlFor="email" className="text-slate-700">
                 {t("email")}
               </Label>
               <Input
@@ -112,18 +90,16 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="doctor@clinic.com"
                 autoComplete="email"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("email")}
               />
-              {errors.email && (
-                <p className="text-xs text-red-400">
-                  {errors.email.message}
-                </p>
-              )}
+              {errors.email ? (
+                <p className="text-xs text-red-600">{errors.email.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-blue-100/80">
+              <Label htmlFor="password" className="text-slate-700">
                 {t("password")}
               </Label>
               <Input
@@ -131,39 +107,35 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="new-password"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("password")}
               />
-              {errors.password && (
-                <p className="text-xs text-red-400">
-                  {errors.password.message}
-                </p>
-              )}
+              {errors.password ? (
+                <p className="text-xs text-red-600">{errors.password.message}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clinic_name" className="text-blue-100/80">
+              <Label htmlFor="clinic_name" className="text-slate-700">
                 {t("clinic_name")}
               </Label>
               <Input
                 id="clinic_name"
                 type="text"
                 placeholder="Bright Smile Dental"
-                className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:border-blue-400 focus:ring-blue-400/20"
+                className="h-11 border-slate-200 bg-white"
                 {...register("clinic_name")}
               />
-              {errors.clinic_name && (
-                <p className="text-xs text-red-400">
-                  {errors.clinic_name.message}
-                </p>
-              )}
+              {errors.clinic_name ? (
+                <p className="text-xs text-red-600">{errors.clinic_name.message}</p>
+              ) : null}
             </div>
-          </CardContent>
+          </div>
 
-          <CardFooter className="flex flex-col gap-4">
+          <div className="space-y-4 border-t border-slate-100 pt-6">
             <Button
               type="submit"
-              className="w-full bg-blue-600 text-white hover:bg-blue-700"
+              className="h-11 w-full bg-teal-600 text-white hover:bg-teal-700"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -176,18 +148,14 @@ export default function RegisterPage() {
               )}
             </Button>
 
-            <p className="text-center text-sm text-blue-200/60">
-              {t("has_account")}{" "}
-              <Link
-                href={`/${locale}/login`}
-                className="font-medium text-blue-400 hover:text-blue-300 hover:underline"
-              >
-                {t("sign_in")}
-              </Link>
-            </p>
-          </CardFooter>
+            <AuthFooterLink
+              prompt={t("has_account")}
+              href={`/${locale}/login`}
+              label={t("sign_in")}
+            />
+          </div>
         </form>
-      </Card>
+      </AuthCard>
     </div>
   );
 }

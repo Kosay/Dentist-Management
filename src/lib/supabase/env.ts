@@ -1,3 +1,4 @@
+const DEFAULT_SITE_URL = 'https://dentist-management-taupe.vercel.app'
 const DEFAULT_SUPABASE_URL = 'https://cgraxbgpcnhcagmkyjme.supabase.co'
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
   'sb_publishable_6d4NL3uE7UWWWn5OtWVTBg_d3ae__wD'
