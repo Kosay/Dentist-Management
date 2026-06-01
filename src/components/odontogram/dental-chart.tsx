@@ -31,32 +31,34 @@ function ToothRow({
   midIndex: number
 }) {
   return (
-    <div className="flex items-center justify-center">
-      <div className="flex items-end gap-0.5">
-        {teeth.map((tooth, i) => {
-          const state = chart.getToothState(tooth.number)
-          if (!state) return null
-          return (
-            <div key={tooth.number} className="flex items-center">
-              <ToothSvg
-                toothNumber={tooth.number}
-                displayLabel={tooth.displayLabel}
-                surfaces={state.surfaces}
-                condition={state.condition}
-                isSelected={chart.selectedTooth === tooth.number}
-                isUpper={isUpper}
-                readOnly={readOnly}
-                size={44}
-                onSurfaceClick={() => {
-                  chart.selectTooth(tooth.number)
-                }}
-              />
-              {i === midIndex - 1 && (
-                <div className="mx-1 h-10 w-px bg-border" />
-              )}
-            </div>
-          )
-        })}
+    <div className="overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
+      <div className="mx-auto flex min-w-max items-center justify-center px-1">
+        <div className="flex items-end gap-0.5 sm:gap-1">
+          {teeth.map((tooth, i) => {
+            const state = chart.getToothState(tooth.number)
+            if (!state) return null
+            return (
+              <div key={tooth.number} className="flex shrink-0 items-center">
+                <ToothSvg
+                  toothNumber={tooth.number}
+                  displayLabel={tooth.displayLabel}
+                  surfaces={state.surfaces}
+                  condition={state.condition}
+                  isSelected={chart.selectedTooth === tooth.number}
+                  isUpper={isUpper}
+                  readOnly={readOnly}
+                  size={34}
+                  onSurfaceClick={() => {
+                    chart.selectTooth(tooth.number)
+                  }}
+                />
+                {i === midIndex - 1 && (
+                  <div className="mx-0.5 h-8 w-px shrink-0 bg-border sm:mx-1 sm:h-10" />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -94,7 +96,10 @@ export function DentalChart({
             <OdontogramLegend />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 pt-4">
+        <CardContent className="space-y-3 overflow-x-hidden pt-4">
+          <p className="text-center text-[10px] text-muted-foreground sm:hidden">
+            {t('scroll_hint')}
+          </p>
           <div className="flex items-center justify-between px-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             <span>{t('upper_right')}</span>
             <span>{t('upper_left')}</span>
@@ -128,6 +133,7 @@ export function DentalChart({
       {chart.selectedToothData && chart.selectedToothState && (
         <div className="w-full shrink-0 lg:w-80">
           <ToothDetailPanel
+            patientId={patientId}
             tooth={chart.selectedToothData}
             toothState={chart.selectedToothState}
             isPrimary={initialIsPrimary}

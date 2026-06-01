@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { Controller, useForm } from 'react-hook-form'
 import {
   Dialog,
@@ -25,6 +26,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useUploadImage } from '@/hooks/use-images'
 import { useVisits } from '@/hooks/use-visits'
 import { useTreatmentPlans } from '@/hooks/use-treatments'
+import { getTreatmentTypeLabel } from '@/lib/treatment-types'
+import {
+  isWithinImageSizeLimit,
+  MAX_IMAGE_SIZE_MB,
+} from '@/lib/image-upload-limits'
 import { Upload, X, FileImage, Loader2 } from 'lucide-react'
 import type { ImageCategory } from '@/types/database'
 import { cn } from '@/lib/utils'
@@ -34,6 +40,7 @@ const CATEGORIES: { value: ImageCategory; labelKey: string }[] = [
   { value: 'after_treatment', labelKey: 'after_treatment' },
   { value: 'clinical_photo', labelKey: 'clinical_photo' },
   { value: 'xray', labelKey: 'xray' },
+  { value: 'panoramic', labelKey: 'panoramic' },
 ]
 
 const ACCEPTED_TYPES = [
@@ -64,6 +71,7 @@ export function ImageUpload({
   patientId,
 }: ImageUploadProps) {
   const t = useTranslations('images')
+  const tt = useTranslations('treatments')
   const tc = useTranslations('common')
   const uploadMutation = useUploadImage()
   const { data: visits = [] } = useVisits(patientId)
@@ -83,9 +91,14 @@ export function ImageUpload({
   })
 
   const handleFiles = useCallback((newFiles: FileList | File[]) => {
-    const validFiles = Array.from(newFiles).filter((f) =>
-      ACCEPTED_TYPES.includes(f.type)
-    )
+    const validFiles = Array.from(newFiles).filter((f) => {
+      if (!ACCEPTED_TYPES.includes(f.type)) return false
+      if (!isWithinImageSizeLimit(f)) {
+        toast.error(t('size_limit_error', { max: MAX_IMAGE_SIZE_MB }))
+        return false
+      }
+      return true
+    })
     setFiles((prev) => [...prev, ...validFiles])
 
     validFiles.forEach((file) => {
@@ -99,7 +112,7 @@ export function ImageUpload({
         setPreviews((prev) => [...prev, ''])
       }
     })
-  }, [])
+  }, [t])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -344,7 +357,10 @@ export function ImageUpload({
                     <SelectContent>
                       {treatments.map((tp) => (
                         <SelectItem key={tp.id} value={tp.id}>
-                          {tp.treatment_type}
+                          {getTreatmentTypeLabel(
+                            (key) => tt(key),
+                            tp.treatment_type
+                          )}
                           {tp.tooth_number ? ` (#${tp.tooth_number})` : ''}
                         </SelectItem>
                       ))}

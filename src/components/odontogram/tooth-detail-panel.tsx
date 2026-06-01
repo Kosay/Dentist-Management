@@ -16,8 +16,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { CONDITION_COLORS, CONDITIONS, getDisplayQuadrantLabel, type ToothData } from './tooth-data'
 import type { ToothState } from '@/hooks/use-odontogram'
+import { ToothXraySection } from './tooth-xray-section'
 
 interface ToothDetailPanelProps {
+  patientId: string
   tooth: ToothData
   toothState: ToothState
   readOnly?: boolean
@@ -49,6 +51,7 @@ function ConditionBadge({ condition }: { condition: ToothCondition }) {
 }
 
 export function ToothDetailPanel({
+  patientId,
   tooth,
   toothState,
   readOnly = false,
@@ -167,6 +170,12 @@ export function ToothDetailPanel({
             className="min-h-[72px] resize-none text-sm"
           />
         </div>
+
+        <ToothXraySection
+          patientId={patientId}
+          toothNumber={tooth.number}
+          readOnly={readOnly}
+        />
 
         {/* Tooth history */}
         <div className="space-y-2">

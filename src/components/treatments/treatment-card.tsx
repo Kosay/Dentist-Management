@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useUpdateTreatmentPlan } from '@/hooks/use-treatments'
+import { getTreatmentTypeLabel } from '@/lib/treatment-types'
 import { MoreVertical, Pencil, Trash2, ArrowRightCircle } from 'lucide-react'
 import type { Tables, TreatmentStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
@@ -57,6 +58,7 @@ export function TreatmentCard({
   onDelete,
 }: TreatmentCardProps) {
   const t = useTranslations('treatments')
+  const tSurfaces = useTranslations('odontogram')
   const tc = useTranslations('common')
   const updateMutation = useUpdateTreatmentPlan()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -88,13 +90,13 @@ export function TreatmentCard({
               )}
               <div>
                 <CardTitle className="text-sm font-semibold">
-                  {treatment.treatment_type}
+                  {getTreatmentTypeLabel(t, treatment.treatment_type)}
                 </CardTitle>
                 {treatment.surface && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {treatment.surface
                       .split(',')
-                      .map((s) => s.trim())
+                      .map((s) => tSurfaces(`surfaces.${s.trim() as 'mesial'}`))
                       .join(', ')}
                   </p>
                 )}

@@ -19,6 +19,8 @@ const CATEGORY_STYLES: Record<ImageCategory, string> = {
   clinical_photo:
     'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
   xray: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-400',
+  panoramic:
+    'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-400',
 }
 
 interface ImageGalleryProps {
