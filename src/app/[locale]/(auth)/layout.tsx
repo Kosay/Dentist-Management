@@ -4,6 +4,7 @@ import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Languages } from "lucide-react";
+import AuthProvider from "@/providers/auth-provider";
 
 function LanguageSwitcher() {
   const locale = useLocale();
@@ -43,7 +44,7 @@ export default function AuthLayout({
       </div>
 
       <div className="relative z-10 w-full max-w-md px-4">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </div>
     </div>
   );
