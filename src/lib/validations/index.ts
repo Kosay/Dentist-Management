@@ -1,30 +1,66 @@
 import { z } from "zod";
 
+function optionalTrimmedString() {
+  return z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (!value || value.trim() === "") return undefined;
+      return value.trim();
+    });
+}
+
+function optionalEmailString() {
+  return z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (!value || value.trim() === "") return undefined;
+      return value.trim();
+    })
+    .pipe(
+      z.union([
+        z.undefined(),
+        z.email({ error: "Invalid email address" }),
+      ])
+    );
+}
+
+function optionalPositiveNumber() {
+  return z
+    .union([z.number(), z.nan()])
+    .optional()
+    .transform((value) =>
+      value === undefined || Number.isNaN(value) ? undefined : value
+    )
+    .pipe(z.union([z.undefined(), z.number().positive()]));
+}
+
 // ---------------------------------------------------------------------------
 // Patient
 // ---------------------------------------------------------------------------
 
 export const patientSchema = z.object({
   full_name: z.string().min(2, { error: "Full name must be at least 2 characters" }),
-  full_name_ar: z.string().optional(),
+  full_name_ar: optionalTrimmedString(),
   gender: z.enum(["male", "female", "other"]).optional(),
-  date_of_birth: z.string().optional(),
-  height_cm: z.number().positive().optional(),
-  weight_kg: z.number().positive().optional(),
-  occupation: z.string().optional(),
-  address: z.string().optional(),
-  mobile: z.string().optional(),
-  email: z.email({ error: "Invalid email address" }).optional(),
-  companion_name: z.string().optional(),
-  companion_mobile: z.string().optional(),
-  drug_allergies: z.string().optional(),
-  current_medications: z.string().optional(),
+  date_of_birth: optionalTrimmedString(),
+  height_cm: optionalPositiveNumber(),
+  weight_kg: optionalPositiveNumber(),
+  occupation: optionalTrimmedString(),
+  address: optionalTrimmedString(),
+  mobile: optionalTrimmedString(),
+  email: optionalEmailString(),
+  companion_name: optionalTrimmedString(),
+  companion_mobile: optionalTrimmedString(),
+  drug_allergies: optionalTrimmedString(),
+  current_medications: optionalTrimmedString(),
   is_smoker: z.boolean().default(false),
   alcohol_consumption: z.boolean().default(false),
   has_heart_disease: z.boolean().default(false),
   has_diabetes: z.boolean().default(false),
-  blood_pressure_notes: z.string().optional(),
-  medical_notes: z.string().optional(),
+  blood_pressure_notes: optionalTrimmedString(),
+  medical_notes: optionalTrimmedString(),
 });
 
 export type Patient = z.infer<typeof patientSchema>;
@@ -191,12 +227,12 @@ export type Register = z.infer<typeof registerSchema>;
 
 export const clinicSchema = z.object({
   name: z.string().min(2, { error: "Clinic name must be at least 2 characters" }),
-  name_ar: z.string().optional(),
-  email: z.email().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  address_ar: z.string().optional(),
-  license_number: z.string().optional(),
+  name_ar: optionalTrimmedString(),
+  email: optionalEmailString(),
+  phone: optionalTrimmedString(),
+  address: optionalTrimmedString(),
+  address_ar: optionalTrimmedString(),
+  license_number: optionalTrimmedString(),
 });
 
 export type Clinic = z.infer<typeof clinicSchema>;

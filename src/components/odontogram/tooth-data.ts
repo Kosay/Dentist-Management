@@ -2,7 +2,8 @@ import type { ToothCondition, ToothSurface } from '@/types/database'
 
 export interface ToothData {
   number: number
-  name: string
+  displayLabel: string
+  nameKey: string
   quadrant: number
   position: number
   surfaces: ToothSurface[]
@@ -16,34 +17,40 @@ export interface SurfaceCondition {
 const ANTERIOR_SURFACES: ToothSurface[] = ['mesial', 'distal', 'buccal', 'lingual', 'incisal']
 const POSTERIOR_SURFACES: ToothSurface[] = ['mesial', 'distal', 'buccal', 'lingual', 'occlusal']
 
-const PERMANENT_NAMES: Record<number, string> = {
-  1: 'Central Incisor',
-  2: 'Lateral Incisor',
-  3: 'Canine',
-  4: 'First Premolar',
-  5: 'Second Premolar',
-  6: 'First Molar',
-  7: 'Second Molar',
-  8: 'Third Molar (Wisdom)',
+const PERMANENT_NAME_KEYS: Record<number, string> = {
+  1: 'central_incisor',
+  2: 'lateral_incisor',
+  3: 'canine',
+  4: 'first_premolar',
+  5: 'second_premolar',
+  6: 'first_molar',
+  7: 'second_molar',
+  8: 'third_molar',
 }
 
-const PRIMARY_NAMES: Record<number, string> = {
-  1: 'Central Incisor',
-  2: 'Lateral Incisor',
-  3: 'Canine',
-  4: 'First Molar',
-  5: 'Second Molar',
+const PRIMARY_NAME_KEYS: Record<number, string> = {
+  1: 'central_incisor',
+  2: 'lateral_incisor',
+  3: 'canine',
+  4: 'first_molar',
+  5: 'second_molar',
 }
 
-function isAnterior(position: number, isPrimary: boolean): boolean {
-  if (isPrimary) return position <= 3
+function isAnterior(position: number): boolean {
   return position <= 3
+}
+
+function getDisplayLabel(position: number, isPrimary: boolean): string {
+  if (isPrimary) {
+    return String.fromCharCode(64 + position)
+  }
+  return String(position)
 }
 
 function buildTeeth(
   quadrant: number,
   count: number,
-  nameMap: Record<number, string>,
+  nameKeys: Record<number, string>,
   isPrimary: boolean
 ): ToothData[] {
   return Array.from({ length: count }, (_, i) => {
@@ -51,26 +58,27 @@ function buildTeeth(
     const number = quadrant * 10 + position
     return {
       number,
-      name: nameMap[position] ?? `Tooth ${number}`,
+      displayLabel: getDisplayLabel(position, isPrimary),
+      nameKey: nameKeys[position] ?? 'unknown',
       quadrant,
       position,
-      surfaces: isAnterior(position, isPrimary) ? ANTERIOR_SURFACES : POSTERIOR_SURFACES,
+      surfaces: isAnterior(position) ? ANTERIOR_SURFACES : POSTERIOR_SURFACES,
     }
   })
 }
 
 export const PERMANENT_TEETH: ToothData[] = [
-  ...buildTeeth(1, 8, PERMANENT_NAMES, false),
-  ...buildTeeth(2, 8, PERMANENT_NAMES, false),
-  ...buildTeeth(3, 8, PERMANENT_NAMES, false),
-  ...buildTeeth(4, 8, PERMANENT_NAMES, false),
+  ...buildTeeth(1, 8, PERMANENT_NAME_KEYS, false),
+  ...buildTeeth(2, 8, PERMANENT_NAME_KEYS, false),
+  ...buildTeeth(3, 8, PERMANENT_NAME_KEYS, false),
+  ...buildTeeth(4, 8, PERMANENT_NAME_KEYS, false),
 ]
 
 export const PRIMARY_TEETH: ToothData[] = [
-  ...buildTeeth(5, 5, PRIMARY_NAMES, true),
-  ...buildTeeth(6, 5, PRIMARY_NAMES, true),
-  ...buildTeeth(7, 5, PRIMARY_NAMES, true),
-  ...buildTeeth(8, 5, PRIMARY_NAMES, true),
+  ...buildTeeth(5, 5, PRIMARY_NAME_KEYS, true),
+  ...buildTeeth(6, 5, PRIMARY_NAME_KEYS, true),
+  ...buildTeeth(7, 5, PRIMARY_NAME_KEYS, true),
+  ...buildTeeth(8, 5, PRIMARY_NAME_KEYS, true),
 ]
 
 export const TOOTH_SURFACES: ToothSurface[] = [
@@ -120,4 +128,11 @@ export function getLowerArch(isPrimary: boolean): ToothData[] {
 
 export function hasCenterSurface(tooth: ToothData): 'occlusal' | 'incisal' {
   return tooth.surfaces.includes('occlusal') ? 'occlusal' : 'incisal'
+}
+
+export function getDisplayQuadrantLabel(quadrant: number, isPrimary: boolean): number {
+  if (isPrimary) {
+    return quadrant - 4
+  }
+  return quadrant
 }

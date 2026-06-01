@@ -6,6 +6,7 @@ import { CONDITION_COLORS, type SurfaceCondition } from './tooth-data'
 
 interface ToothSvgProps {
   toothNumber: number
+  displayLabel: string
   surfaces: SurfaceCondition[]
   onSurfaceClick?: (surface: ToothSurface) => void
   isSelected?: boolean
@@ -33,6 +34,7 @@ function findSurfaceCondition(
 
 export function ToothSvg({
   toothNumber,
+  displayLabel,
   surfaces,
   onSurfaceClick,
   isSelected = false,
@@ -122,7 +124,7 @@ export function ToothSvg({
           className="text-[10px] font-medium tabular-nums text-muted-foreground leading-none"
           style={{ height: labelHeight, lineHeight: `${labelHeight}px` }}
         >
-          {toothNumber}
+          {displayLabel}
         </span>
       )}
       <svg
@@ -194,7 +196,7 @@ export function ToothSvg({
           className="text-[10px] font-medium tabular-nums text-muted-foreground leading-none"
           style={{ height: labelHeight, lineHeight: `${labelHeight}px` }}
         >
-          {toothNumber}
+          {displayLabel}
         </span>
       )}
     </div>

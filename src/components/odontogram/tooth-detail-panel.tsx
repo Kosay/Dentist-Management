@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { CONDITION_COLORS, CONDITIONS, type ToothData } from './tooth-data'
+import { CONDITION_COLORS, CONDITIONS, getDisplayQuadrantLabel, type ToothData } from './tooth-data'
 import type { ToothState } from '@/hooks/use-odontogram'
 
 interface ToothDetailPanelProps {
@@ -52,13 +52,16 @@ export function ToothDetailPanel({
   tooth,
   toothState,
   readOnly = false,
+  isPrimary = false,
   onConditionChange,
   onSurfaceConditionChange,
   onNotesChange,
   onClose,
-}: ToothDetailPanelProps) {
+}: ToothDetailPanelProps & { isPrimary?: boolean }) {
   const t = useTranslations('odontogram')
   const tc = useTranslations('common')
+  const toothName = t(`tooth_names.${tooth.nameKey}`)
+  const quadrantLabel = getDisplayQuadrantLabel(tooth.quadrant, isPrimary)
 
   return (
     <Card className="w-full">
@@ -67,12 +70,12 @@ export function ToothDetailPanel({
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2">
               <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary tabular-nums">
-                {tooth.number}
+                {tooth.displayLabel}
               </span>
-              <span>{tooth.name}</span>
+              <span>{toothName}</span>
             </CardTitle>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{t('quadrant')} {tooth.quadrant}</span>
+              <span>{t('quadrant')} {quadrantLabel}</span>
               <span>&middot;</span>
               <ConditionBadge condition={toothState.condition} />
             </div>
