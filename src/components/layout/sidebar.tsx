@@ -1,0 +1,219 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  CreditCard,
+  Settings,
+  Shield,
+  LogOut,
+  Languages,
+  ChevronUp,
+} from "lucide-react";
+
+import { useAuth } from "@/providers/auth-provider";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const NAV_ITEMS = [
+  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { key: "patients", href: "/patients", icon: Users },
+  { key: "appointments", href: "/appointments", icon: Calendar },
+  { key: "billing", href: "/billing", icon: CreditCard },
+  { key: "settings", href: "/settings", icon: Settings },
+] as const;
+
+const ADMIN_ITEM = {
+  key: "admin",
+  href: "/admin",
+  icon: Shield,
+} as const;
+
+export function AppSidebar() {
+  const t = useTranslations("nav");
+  const tAuth = useTranslations("auth");
+  const locale = useLocale();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { profile, clinic, signOut } = useAuth();
+
+  const isActive = (href: string) => {
+    const fullPath = `/${locale}${href}`;
+    if (href === "/dashboard") {
+      return pathname === fullPath;
+    }
+    return pathname.startsWith(fullPath);
+  };
+
+  const toggleLocale = () => {
+    const newLocale = locale === "en" ? "ar" : "en";
+    const newPath = pathname.replace(`/${locale}`, `/${newLocale}`);
+    router.push(newPath);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push(`/${locale}/login`);
+  };
+
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "DC";
+
+  return (
+    <Sidebar side={locale === "ar" ? "right" : "left"} dir={locale === "ar" ? "rtl" : "ltr"}>
+      <SidebarHeader className="p-4">
+        <Link href={`/${locale}/dashboard`} className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+            {clinic?.name?.slice(0, 2).toUpperCase() ?? "DC"}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-sidebar-foreground truncate max-w-[140px]">
+              {clinic?.name ?? "Dental Clinic"}
+            </span>
+            <span className="text-xs text-sidebar-foreground/60">
+              {profile?.role?.replace("_", " ") ?? ""}
+            </span>
+          </div>
+        </Link>
+      </SidebarHeader>
+
+      <SidebarSeparator />
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>{t("dashboard")}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map((item) => (
+                <SidebarMenuItem key={item.key}>
+                  <SidebarMenuButton
+                    isActive={isActive(item.href)}
+                    tooltip={t(item.key)}
+                    render={
+                      <Link href={`/${locale}${item.href}`} />
+                    }
+                  >
+                    <item.icon className="size-4" />
+                    <span>{t(item.key)}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+
+              {profile?.role === "super_admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={isActive(ADMIN_ITEM.href)}
+                    tooltip={t(ADMIN_ITEM.key)}
+                    render={
+                      <Link href={`/${locale}${ADMIN_ITEM.href}`} />
+                    }
+                  >
+                    <ADMIN_ITEM.icon className="size-4" />
+                    <span>{t(ADMIN_ITEM.key)}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarSeparator />
+
+        <div className="px-2 py-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLocale}
+            className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+          >
+            <Languages className="size-4" />
+            {locale === "en" ? "العربية" : "English"}
+          </Button>
+        </div>
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    className="w-full"
+                  />
+                }
+              >
+                <Avatar size="sm">
+                  {profile?.avatar_url && (
+                    <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
+                  )}
+                  <AvatarFallback className="text-xs">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-1 flex-col text-start text-sm leading-tight">
+                  <span className="truncate font-medium">
+                    {profile?.full_name ?? "User"}
+                  </span>
+                  <span className="truncate text-xs text-sidebar-foreground/60">
+                    {profile?.email ?? ""}
+                  </span>
+                </div>
+                <ChevronUp className="ms-auto size-4" />
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="w-56"
+              >
+                <DropdownMenuItem
+                  onClick={() => router.push(`/${locale}/settings`)}
+                >
+                  <Settings className="size-4" />
+                  {t("settings")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="size-4" />
+                  {tAuth("logout")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
