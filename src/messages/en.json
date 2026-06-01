@@ -107,6 +107,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "overview": "Overview",
     "patients": "Patients",
     "appointments": "Appointments",
     "billing": "Billing",
@@ -300,6 +301,7 @@
     "priority": "Priority",
     "start_date": "Start Date",
     "end_date": "End Date",
+    "diagnosis": "Diagnosis",
     "total_treatments": "Total Treatments",
     "progress": "Progress",
     "types": {

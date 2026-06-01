@@ -107,6 +107,7 @@
   },
   "nav": {
     "dashboard": "لوحة التحكم",
+    "overview": "نظرة عامة",
     "patients": "المرضى",
     "appointments": "المواعيد",
     "billing": "الفواتير",
@@ -300,6 +301,7 @@
     "priority": "الأولوية",
     "start_date": "تاريخ البدء",
     "end_date": "تاريخ الانتهاء",
+    "diagnosis": "التشخيص",
     "total_treatments": "إجمالي العلاجات",
     "progress": "التقدم",
     "types": {
