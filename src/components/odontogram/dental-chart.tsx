@@ -40,6 +40,7 @@ function ToothRow({
             <div key={tooth.number} className="flex items-center">
               <ToothSvg
                 toothNumber={tooth.number}
+                displayLabel={tooth.displayLabel}
                 surfaces={state.surfaces}
                 condition={state.condition}
                 isSelected={chart.selectedTooth === tooth.number}
@@ -129,6 +130,7 @@ export function DentalChart({
           <ToothDetailPanel
             tooth={chart.selectedToothData}
             toothState={chart.selectedToothState}
+            isPrimary={initialIsPrimary}
             readOnly={readOnly}
             onConditionChange={(cond) =>
               chart.setToothCondition(chart.selectedTooth!, cond)

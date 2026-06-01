@@ -23,6 +23,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, children }: HeaderProps) {
+  const tc = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tNav = useTranslations("nav");
   const locale = useLocale();
@@ -75,7 +76,7 @@ export function Header({ title, children }: HeaderProps) {
 
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">{profile?.full_name ?? "User"}</p>
+              <p className="text-sm font-medium">{profile?.full_name ?? tc("labels.user")}</p>
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
             <DropdownMenuSeparator />

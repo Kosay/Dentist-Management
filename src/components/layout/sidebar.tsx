@@ -56,6 +56,7 @@ const ADMIN_ITEM = {
 export function AppSidebar() {
   const t = useTranslations("nav");
   const tAuth = useTranslations("auth");
+  const tc = useTranslations("common");
   const tRoles = useTranslations("settings.roles");
   const locale = useLocale();
   const pathname = usePathname();
@@ -181,7 +182,7 @@ export function AppSidebar() {
                 </Avatar>
                 <div className="flex flex-1 flex-col text-start text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {profile?.full_name ?? "User"}
+                    {profile?.full_name ?? tc("labels.user")}
                   </span>
                   <span className="truncate text-xs text-sidebar-foreground/60">
                     {profile?.email ?? ""}

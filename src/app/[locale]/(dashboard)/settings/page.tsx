@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
+import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   User,
@@ -225,7 +226,8 @@ function ClinicTab() {
     handleSubmit,
     formState: { errors },
   } = useForm<ClinicFormValues>({
-    resolver: zodResolver(clinicSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(clinicSchema) as any,
     defaultValues: {
       name: clinic?.name ?? '',
       name_ar: clinic?.name_ar ?? '',
@@ -543,6 +545,14 @@ function UsersTab() {
 
 function PreferencesTab() {
   const t = useTranslations('settings')
+  const locale = useLocale()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const switchLanguage = (newLocale: string | null) => {
+    if (!newLocale || newLocale === locale) return
+    router.push(pathname.replace(`/${locale}`, `/${newLocale}`))
+  }
 
   return (
     <div className="space-y-6">
@@ -555,7 +565,7 @@ function PreferencesTab() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('language')}</Label>
-              <Select defaultValue="en">
+              <Select value={locale} onValueChange={switchLanguage}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue />
                 </SelectTrigger>

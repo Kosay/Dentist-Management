@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ToothCondition, ToothSurface } from '@/types/database'
 import {
   PERMANENT_TEETH,
@@ -48,6 +48,12 @@ export function useOdontogram({
     initializeTeethState(teeth)
   )
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null)
+
+  useEffect(() => {
+    const nextTeeth = isPrimary ? PRIMARY_TEETH : PERMANENT_TEETH
+    setTeethState(initializeTeethState(nextTeeth))
+    setSelectedTooth(null)
+  }, [isPrimary])
 
   const getToothState = useCallback(
     (toothNumber: number): ToothState | undefined => teethState.get(toothNumber),

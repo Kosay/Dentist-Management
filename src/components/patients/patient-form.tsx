@@ -95,7 +95,7 @@ export function PatientForm({ patient, onSuccess, isPending }: PatientFormProps)
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="full_name_ar">{t('fields.full_name')} (AR)</Label>
+                <Label htmlFor="full_name_ar">{t('fields.full_name_ar')}</Label>
                 <Input
                   id="full_name_ar"
                   dir="rtl"
@@ -119,7 +119,7 @@ export function PatientForm({ patient, onSuccess, isPending }: PatientFormProps)
                       <SelectContent>
                         <SelectItem value="male">{t('fields.male')}</SelectItem>
                         <SelectItem value="female">{t('fields.female')}</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="other">{t('fields.other')}</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -159,12 +159,18 @@ export function PatientForm({ patient, onSuccess, isPending }: PatientFormProps)
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="mobile">{t('fields.mobile')}</Label>
+                <Label htmlFor="mobile">
+                  {t('fields.mobile')}{' '}
+                  <span className="text-xs text-muted-foreground">({tc('labels.optional')})</span>
+                </Label>
                 <Input id="mobile" type="tel" dir="ltr" {...register('mobile')} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">{t('fields.email')}</Label>
+                <Label htmlFor="email">
+                  {t('fields.email')}{' '}
+                  <span className="text-xs text-muted-foreground">({tc('labels.optional')})</span>
+                </Label>
                 <Input id="email" type="email" dir="ltr" {...register('email')} />
                 {errors.email && (
                   <p className="text-xs text-destructive">{errors.email.message}</p>
