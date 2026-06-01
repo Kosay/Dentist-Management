@@ -60,6 +60,9 @@ export function useUploadImage() {
       treatmentPlanId,
     }) => {
       if (!clinic?.id || !user?.id) throw new Error('Not authenticated')
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('File exceeds 5 MB limit')
+      }
 
       const fileExt = file.name.split('.').pop()
       const fileName = `${crypto.randomUUID()}.${fileExt}`

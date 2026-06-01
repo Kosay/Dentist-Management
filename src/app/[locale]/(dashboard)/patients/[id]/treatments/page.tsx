@@ -20,6 +20,7 @@ import { DataTable, type Column } from '@/components/shared/data-table'
 import { TreatmentForm } from '@/components/treatments/treatment-form'
 import { TreatmentCard } from '@/components/treatments/treatment-card'
 import { useTreatmentPlans, useUpdateTreatmentPlan } from '@/hooks/use-treatments'
+import { getTreatmentTypeLabel } from '@/lib/treatment-types'
 import type { Tables, TreatmentStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
 
@@ -101,6 +102,7 @@ export default function TreatmentsPage() {
     {
       key: 'treatment_type',
       label: t('treatment_type'),
+      render: (item) => getTreatmentTypeLabel(t, item.treatment_type),
     },
     {
       key: 'status',

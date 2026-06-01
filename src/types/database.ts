@@ -26,6 +26,7 @@ export type ImageCategory =
   | 'after_treatment'
   | 'clinical_photo'
   | 'xray'
+  | 'panoramic'
 
 export type SubscriptionStatus = 'active' | 'frozen' | 'expired' | 'cancelled'
 

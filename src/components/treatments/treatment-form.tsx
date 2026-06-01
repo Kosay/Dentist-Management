@@ -29,22 +29,12 @@ import {
   useCreateTreatmentPlan,
   useUpdateTreatmentPlan,
 } from '@/hooks/use-treatments'
+import {
+  TREATMENT_TYPE_SLUGS,
+  getTreatmentTypeLabel,
+  normalizeTreatmentType,
+} from '@/lib/treatment-types'
 import type { Tables, TreatmentStatus, ToothSurface } from '@/types/database'
-
-const TREATMENT_TYPES = [
-  'Filling',
-  'Crown',
-  'Root Canal',
-  'Extraction',
-  'Cleaning',
-  'Whitening',
-  'Implant',
-  'Bridge',
-  'Denture',
-  'Orthodontics',
-  'Veneer',
-  'Sealant',
-] as const
 
 const SURFACES: ToothSurface[] = [
   'mesial',
@@ -89,6 +79,7 @@ export function TreatmentForm({
   treatment,
 }: TreatmentFormProps) {
   const t = useTranslations('treatments')
+  const tOdontogram = useTranslations('odontogram')
   const tc = useTranslations('common')
   const { user, clinic } = useAuth()
   const createMutation = useCreateTreatmentPlan()
@@ -117,7 +108,7 @@ export function TreatmentForm({
         tooth_number: treatment.tooth_number ?? undefined,
         surfaces: treatment.surface ? treatment.surface.split(',') : [],
         diagnosis: treatment.diagnosis ?? '',
-        treatment_type: treatment.treatment_type,
+        treatment_type: normalizeTreatmentType(treatment.treatment_type),
         description: treatment.description ?? '',
         cost: treatment.cost,
         discount: treatment.discount,
@@ -275,7 +266,7 @@ export function TreatmentForm({
                               }
                             }}
                           />
-                          <span className="capitalize">{surface}</span>
+                          <span>{tOdontogram(`surfaces.${surface}`)}</span>
                         </label>
                       ))}
                     </>
@@ -295,9 +286,9 @@ export function TreatmentForm({
                       <SelectValue placeholder={t('treatment_type')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {TREATMENT_TYPES.map((type) => (
+                      {TREATMENT_TYPE_SLUGS.map((type) => (
                         <SelectItem key={type} value={type}>
-                          {type}
+                          {t(`types.${type}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>

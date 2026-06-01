@@ -296,6 +296,14 @@
     "select_surface": "Select Surface",
     "tooth_history": "Tooth History",
     "no_records": "No records for this tooth",
+    "scroll_hint": "Swipe horizontally to see all teeth",
+    "xray_images": "X-Ray Images",
+    "upload_xray": "Upload X-Ray",
+    "no_xray_images": "No X-ray images for this tooth",
+    "xray_size_hint": "Max file size: 5 MB (JPG, PNG, WebP)",
+    "xray_size_limit": "Image must be smaller than 5 MB",
+    "xray_invalid_type": "Please upload an image file",
+    "xray_for_tooth": "X-ray for tooth",
     "tooth_names": {
       "central_incisor": "Central Incisor",
       "lateral_incisor": "Lateral Incisor",
@@ -347,7 +355,8 @@
       "scaling": "Scaling & Polishing",
       "gum_treatment": "Gum Treatment",
       "pediatric": "Pediatric Dentistry",
-      "cosmetic": "Cosmetic Dentistry"
+      "cosmetic": "Cosmetic Dentistry",
+      "sealant": "Sealant"
     }
   },
   "billing": {
@@ -454,7 +463,9 @@
     "image_notes": "Image Notes",
     "no_images": "No images uploaded",
     "drag_drop": "Drag and drop images here or click to upload",
-    "supported_formats": "Supported formats: JPG, PNG, DICOM"
+    "supported_formats": "Supported formats: JPG, PNG, WebP (max 5 MB)",
+    "size_limit_error": "Each file must be smaller than {max} MB",
+    "panoramic_tab_hint": "Upload full-mouth panoramic images in the Images tab"
   },
   "reports": {
     "title": "Reports & Analytics",

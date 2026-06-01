@@ -106,6 +106,14 @@ export default function ImagesPage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="panoramic">
+            {t('panoramic')}
+            {categoryCounts.panoramic > 0 && (
+              <span className="ml-1 text-xs text-muted-foreground">
+                ({categoryCounts.panoramic})
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="compare">{t('compare')}</TabsTrigger>
         </TabsList>
 
@@ -134,6 +142,12 @@ export default function ImagesPage() {
           />
         </TabsContent>
         <TabsContent value="xray">
+          <ImageGallery
+            images={filteredImages}
+            onDelete={(img) => deleteMutation.mutate(img)}
+          />
+        </TabsContent>
+        <TabsContent value="panoramic">
           <ImageGallery
             images={filteredImages}
             onDelete={(img) => deleteMutation.mutate(img)}
