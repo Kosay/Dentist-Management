@@ -3,6 +3,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
+import {
+  buildPatientFileStoragePath,
+  PATIENT_FILES_BUCKET,
+  resolvePatientFileUrl,
+} from '@/lib/patient-file-storage'
 import type { Tables, InsertTables, ImageCategory } from '@/types/database'
 
 type PatientImage = Tables<'patient_images'>
@@ -28,7 +33,20 @@ export function usePatientImages(patientId: string, category?: ImageCategory) {
 
       const { data, error } = await query
       if (error) throw error
-      return (data ?? []) as unknown as PatientImage[]
+
+      const images = (data ?? []) as unknown as PatientImage[]
+      const resolved = await Promise.all(
+        images.map(async (image) => {
+          try {
+            const signedUrl = await resolvePatientFileUrl(supabase, image.file_url)
+            return { ...image, file_url: signedUrl }
+          } catch {
+            return image
+          }
+        })
+      )
+
+      return resolved
     },
     enabled: !!clinic?.id && !!patientId,
   })
@@ -66,10 +84,15 @@ export function useUploadImage() {
 
       const fileExt = file.name.split('.').pop()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
-      const storagePath = `patient-files/${clinic.id}/${patientId}/${category}/${fileName}`
+      const storagePath = buildPatientFileStoragePath(
+        clinic.id,
+        patientId,
+        category,
+        fileName
+      )
 
       const { error: uploadError } = await supabase.storage
-        .from('patient-files')
+        .from(PATIENT_FILES_BUCKET)
         .upload(storagePath, file, {
           cacheControl: '3600',
           upsert: false,
@@ -77,21 +100,17 @@ export function useUploadImage() {
 
       if (uploadError) throw uploadError
 
-      const { data: urlData } = supabase.storage
-        .from('patient-files')
-        .getPublicUrl(storagePath)
-
       const record: PatientImageInsert = {
         clinic_id: clinic.id,
         patient_id: patientId,
         uploaded_by: user.id,
-        file_url: urlData.publicUrl,
+        file_url: storagePath,
         file_name: file.name,
         file_size: file.size,
-        mime_type: file.type,
+        mime_type: file.type || 'application/octet-stream',
         category,
         description: description || null,
-        tooth_number: toothNumber || null,
+        tooth_number: toothNumber ?? null,
         visit_id: visitId || null,
         treatment_plan_id: treatmentPlanId || null,
       }

@@ -49,7 +49,7 @@ export function ToothXraySection({
       return
     }
 
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
       toast.error(t('xray_invalid_type'))
       e.target.value = ''
       return
@@ -64,8 +64,10 @@ export function ToothXraySection({
         description: `${t('xray_for_tooth')} ${toothNumber}`,
       })
       toast.success(tc('messages.save_success'))
-    } catch {
-      toast.error(tc('messages.save_error'))
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : tc('messages.save_error')
+      toast.error(message)
     } finally {
       e.target.value = ''
     }
