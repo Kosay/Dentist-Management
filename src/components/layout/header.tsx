@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "@/i18n/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Bell, LogOut, Settings, User } from "lucide-react";
 
 import { useAuth } from "@/providers/auth-provider";
@@ -26,7 +26,6 @@ export function Header({ title, children }: HeaderProps) {
   const tc = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tNav = useTranslations("nav");
-  const locale = useLocale();
   const router = useRouter();
   const { profile, signOut } = useAuth();
 
@@ -41,7 +40,7 @@ export function Header({ title, children }: HeaderProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push(`/${locale}/login`);
+    router.push("/login");
   };
 
   return (
@@ -80,11 +79,11 @@ export function Header({ title, children }: HeaderProps) {
               <p className="text-xs text-muted-foreground">{profile?.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push(`/${locale}/settings`)}>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
               <User className="size-4" />
               {tNav("settings")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(`/${locale}/settings`)}>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
               <Settings className="size-4" />
               {tNav("notifications")}
             </DropdownMenuItem>
