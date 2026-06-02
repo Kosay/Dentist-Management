@@ -79,30 +79,27 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfileAndClinic = useCallback(
     async (userId: string) => {
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (profileError) throw profileError
+
+      const p = profileData as unknown as Profile
+      setProfile(p)
+
+      if (p.clinic_id) {
+        const { data: clinicData, error: clinicError } = await supabase
+          .from('clinics')
           .select('*')
-          .eq('id', userId)
+          .eq('id', p.clinic_id)
           .single()
 
-        if (profileError) throw profileError
-
-        const p = profileData as unknown as Profile
-        setProfile(p)
-
-        if (p.clinic_id) {
-          const { data: clinicData, error: clinicError } = await supabase
-            .from('clinics')
-            .select('*')
-            .eq('id', p.clinic_id)
-            .single()
-
-          if (clinicError) throw clinicError
-          setClinic(clinicData as unknown as Clinic)
-        }
-      } catch {
-        setProfile(null)
+        if (clinicError) throw clinicError
+        setClinic(clinicData as unknown as Clinic)
+      } else {
         setClinic(null)
       }
     },
@@ -110,6 +107,34 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
+    let mounted = true
+
+    const loadSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!mounted) return
+
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+
+      if (currentUser) {
+        try {
+          await fetchProfileAndClinic(currentUser.id)
+        } catch {
+          // Keep existing profile/clinic on transient failures (e.g. locale navigation)
+        }
+      } else {
+        setProfile(null)
+        setClinic(null)
+      }
+
+      if (mounted) setLoading(false)
+    }
+
+    void loadSession()
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -117,16 +142,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser)
 
       if (currentUser) {
-        await fetchProfileAndClinic(currentUser.id)
-      } else {
+        try {
+          await fetchProfileAndClinic(currentUser.id)
+        } catch {
+          // Do not clear profile on failed refresh — avoids showing "User" after locale switch
+        }
+      } else if (event === 'SIGNED_OUT') {
         setProfile(null)
         setClinic(null)
       }
 
-      setLoading(false)
+      if (mounted) setLoading(false)
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [supabase, fetchProfileAndClinic])

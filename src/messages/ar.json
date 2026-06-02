@@ -143,6 +143,7 @@
     "delete_patient": "حذف المريض",
     "search_patients": "البحث عن مرضى...",
     "patient_details": "تفاصيل المريض",
+    "patient_not_found": "المريض غير موجود أو ليس لديك صلاحية الوصول",
     "patient_list": "قائمة المرضى",
     "total_patients": "إجمالي المرضى",
     "new_patients_this_month": "المرضى الجدد هذا الشهر",
