@@ -143,6 +143,7 @@
     "delete_patient": "Delete Patient",
     "search_patients": "Search patients...",
     "patient_details": "Patient Details",
+    "patient_not_found": "Patient not found or you do not have access",
     "patient_list": "Patient List",
     "total_patients": "Total Patients",
     "new_patients_this_month": "New Patients This Month",

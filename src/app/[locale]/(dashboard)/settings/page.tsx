@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations, useLocale } from 'next-intl'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter, usePathname } from '@/i18n/navigation'
+import type { Locale } from '@/i18n/routing'
 import { toast } from 'sonner'
 import {
   User,
@@ -551,7 +552,7 @@ function PreferencesTab() {
 
   const switchLanguage = (newLocale: string | null) => {
     if (!newLocale || newLocale === locale) return
-    router.push(pathname.replace(`/${locale}`, `/${newLocale}`))
+    router.replace(pathname, { locale: newLocale as Locale })
   }
 
   return (

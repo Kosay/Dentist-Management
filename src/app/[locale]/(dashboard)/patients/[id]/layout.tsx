@@ -1,9 +1,8 @@
 'use client'
 
-import { useParams, usePathname } from 'next/navigation'
-import { useLocale } from 'next-intl'
+import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import Link from 'next/link'
+import { Link, usePathname } from '@/i18n/navigation'
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -33,13 +32,12 @@ export default function PatientDetailLayout({
 }) {
   const params = useParams<{ id: string }>()
   const pathname = usePathname()
-  const locale = useLocale()
   const t = useTranslations('nav')
   const tp = useTranslations('patients')
 
-  const { data: patient, isLoading } = usePatient(params.id)
+  const { data: patient, isLoading, isError, error } = usePatient(params.id)
 
-  const basePath = `/${locale}/patients/${params.id}`
+  const basePath = `/patients/${params.id}`
 
   if (pathname.endsWith('/edit')) {
     return <>{children}</>
@@ -53,10 +51,21 @@ export default function PatientDetailLayout({
     )
   }
 
+  if (isError) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-2">
+        <p className="text-muted-foreground">{tp('patient_not_found')}</p>
+        {error?.message && (
+          <p className="text-xs text-muted-foreground/80">{error.message}</p>
+        )}
+      </div>
+    )
+  }
+
   if (!patient) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <p className="text-muted-foreground">{tp('patient_details')}</p>
+        <p className="text-muted-foreground">{tp('patient_not_found')}</p>
       </div>
     )
   }

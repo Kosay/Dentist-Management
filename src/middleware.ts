@@ -17,18 +17,17 @@ function stripLocale(pathname: string): { locale: string; path: string } {
   return { locale: routing.defaultLocale, path: pathname }
 }
 
+function mergeCookies(from: NextResponse, into: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    into.cookies.set(cookie.name, cookie.value, cookie)
+  })
+}
+
 export async function middleware(request: NextRequest) {
+  const { response: supabaseResponse, user } = await updateSession(request)
   const intlResponse = intlMiddleware(request)
 
-  if (intlResponse.status >= 300 && intlResponse.status < 400) {
-    return intlResponse
-  }
-
-  const { response: supabaseResponse, user } = await updateSession(request)
-
-  supabaseResponse.cookies.getAll().forEach((cookie) => {
-    intlResponse.cookies.set(cookie.name, cookie.value, cookie)
-  })
+  mergeCookies(supabaseResponse, intlResponse)
 
   const { pathname } = request.nextUrl
   const { locale, path: pathWithoutLocale } = stripLocale(pathname)
@@ -42,9 +41,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}${path}`
     const redirectResponse = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
-    })
+    mergeCookies(supabaseResponse, redirectResponse)
     return redirectResponse
   }
 

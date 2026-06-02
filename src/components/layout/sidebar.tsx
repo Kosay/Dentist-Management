@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import {
   LayoutDashboard,
   Users,
@@ -64,17 +64,15 @@ export function AppSidebar() {
   const { profile, clinic, signOut } = useAuth();
 
   const isActive = (href: string) => {
-    const fullPath = `/${locale}${href}`;
     if (href === "/dashboard") {
-      return pathname === fullPath;
+      return pathname === href || pathname === `${href}/`;
     }
-    return pathname.startsWith(fullPath);
+    return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   const toggleLocale = () => {
-    const newLocale = locale === "en" ? "ar" : "en";
-    const newPath = pathname.replace(`/${locale}`, `/${newLocale}`);
-    router.push(newPath);
+    const newLocale: Locale = locale === "en" ? "ar" : "en";
+    router.replace(pathname, { locale: newLocale });
   };
 
   const handleSignOut = async () => {
@@ -103,7 +101,7 @@ export function AppSidebar() {
       dir={locale === "ar" ? "rtl" : "ltr"}
     >
       <SidebarHeader className="p-4">
-        <Link href={`/${locale}/dashboard`} className="flex items-center gap-3">
+        <Link href="/dashboard" className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
             {clinicName.slice(0, 2).toUpperCase()}
           </div>
@@ -128,7 +126,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     isActive={isActive(item.href)}
                     tooltip={t(item.key)}
-                    render={<Link href={`/${locale}${item.href}`} />}
+                    render={<Link href={item.href} />}
                   >
                     <item.icon className="size-4" />
                     <span>{t(item.key)}</span>
@@ -141,7 +139,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     isActive={isActive(ADMIN_ITEM.href)}
                     tooltip={t(ADMIN_ITEM.key)}
-                    render={<Link href={`/${locale}${ADMIN_ITEM.href}`} />}
+                    render={<Link href={ADMIN_ITEM.href} />}
                   >
                     <ADMIN_ITEM.icon className="size-4" />
                     <span>{t(ADMIN_ITEM.key)}</span>

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { getSupabaseErrorMessage } from '@/lib/supabase/errors'
 import { useAuth } from '@/providers/auth-provider'
 import type {
   Tables,
@@ -64,7 +65,7 @@ export function useDentalChart({
   readOnly = false,
   onToothClick,
 }: UseDentalChartOptions) {
-  const { clinic } = useAuth()
+  const { clinic, loading: authLoading } = useAuth()
   const supabase = createClient()
   const queryClient = useQueryClient()
 
@@ -140,6 +141,7 @@ export function useDentalChart({
         .select()
         .single()
       if (error) throw error
+      if (!data) throw new Error('Unable to save tooth')
       return data as unknown as ToothRecord
     },
     onSuccess: () => {
@@ -161,12 +163,73 @@ export function useDentalChart({
         .select()
         .single()
       if (error) throw error
+      if (!data) throw new Error('Unable to save surface')
       return data as unknown as SurfaceRecord
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dental_chart'] })
     },
   })
+
+  const ensureSurfaceRecords = useCallback(
+    async (
+      record: ToothRecord & { surface_records: SurfaceRecord[] },
+      tooth: ToothData,
+      state: ToothState
+    ): Promise<ToothRecord & { surface_records: SurfaceRecord[] }> => {
+      if (!clinic?.id) {
+        throw new Error('Clinic not found')
+      }
+
+      const existingSurfaces = new Set(
+        (record.surface_records ?? []).map((item) => item.surface)
+      )
+      const missingSurfaces = state.surfaces.filter(
+        (surfaceState) => !existingSurfaces.has(surfaceState.surface)
+      )
+
+      if (missingSurfaces.length === 0) {
+        return record
+      }
+
+      const surfaceInserts: SurfaceRecordInsert[] = missingSurfaces.map(
+        (surfaceState) => ({
+          tooth_record_id: record.id,
+          clinic_id: clinic.id,
+          surface: surfaceState.surface,
+          condition: surfaceState.condition,
+        })
+      )
+
+      const { data: inserted, error } = await supabase
+        .from('surface_records')
+        .insert(surfaceInserts as never)
+        .select()
+
+      if (error) throw error
+
+      const merged = {
+        ...record,
+        surface_records: [
+          ...(record.surface_records ?? []),
+          ...((inserted ?? []) as unknown as SurfaceRecord[]),
+        ],
+      }
+
+      queryClient.setQueryData<DentalChartWithRecords | null>(queryKey, (current) => {
+        if (!current) return current
+        return {
+          ...current,
+          tooth_records: (current.tooth_records ?? []).map((item) =>
+            item.id === record.id ? merged : item
+          ),
+        }
+      })
+
+      return merged
+    },
+    [clinic?.id, supabase, queryClient, queryKey]
+  )
 
   const getOrCreateChart = useCallback(async (): Promise<DentalChartWithRecords> => {
     if (!clinic?.id) {
@@ -221,11 +284,12 @@ export function useDentalChart({
           existing = existingRow as unknown as ToothRecord & {
             surface_records: SurfaceRecord[]
           }
+          return ensureSurfaceRecords(existing, tooth, state)
         }
       }
 
       if (existing) {
-        return existing
+        return ensureSurfaceRecords(existing, tooth, state)
       }
 
       const toothInsert: ToothRecordInsert = {
@@ -285,11 +349,18 @@ export function useDentalChart({
 
       return fullRecord
     },
-    [clinic?.id, isPrimary, supabase, queryClient, queryKey]
+    [clinic?.id, isPrimary, supabase, queryClient, queryKey, ensureSurfaceRecords]
   )
 
   const resolveToothRecord = useCallback(
     async (toothNumber: number, stateOverride?: ToothState) => {
+      if (authLoading) {
+        throw new Error('Please wait, session is loading')
+      }
+      if (!clinic?.id) {
+        throw new Error('Clinic not found. Please refresh the page or sign in again.')
+      }
+
       const tooth = allTeeth.find((item) => item.number === toothNumber)
       const state = stateOverride ?? localStates[toothNumber]
       if (!tooth || !state) {
@@ -299,7 +370,7 @@ export function useDentalChart({
       const chart = await getOrCreateChart()
       return getOrCreateToothRecord(chart, tooth, state)
     },
-    [allTeeth, localStates, getOrCreateChart, getOrCreateToothRecord]
+    [authLoading, clinic?.id, allTeeth, localStates, getOrCreateChart, getOrCreateToothRecord]
   )
 
   const getToothState = useCallback(
@@ -338,14 +409,14 @@ export function useDentalChart({
         setIsSaving(true)
         try {
           const record = await resolveToothRecord(toothNumber, nextState)
-          await updateToothMutation.mutateAsync({
-            id: record.id,
-            data: { condition },
-          })
+          if (record.condition !== condition) {
+            await updateToothMutation.mutateAsync({
+              id: record.id,
+              data: { condition },
+            })
+          }
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to save tooth'
-          toast.error(message)
+          toast.error(getSupabaseErrorMessage(error, 'Failed to save tooth'))
         } finally {
           setIsSaving(false)
         }
@@ -391,9 +462,7 @@ export function useDentalChart({
             data: { condition },
           })
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to save surface'
-          toast.error(message)
+          toast.error(getSupabaseErrorMessage(error, 'Failed to save surface'))
         } finally {
           setIsSaving(false)
         }
@@ -426,9 +495,7 @@ export function useDentalChart({
             data: { notes },
           })
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Failed to save notes'
-          toast.error(message)
+          toast.error(getSupabaseErrorMessage(error, 'Failed to save notes'))
         } finally {
           setIsSaving(false)
         }
