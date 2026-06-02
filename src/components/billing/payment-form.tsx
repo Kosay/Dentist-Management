@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { format } from 'date-fns'
 
 import {
@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/providers/auth-provider'
 import { useCreatePayment } from '@/hooks/use-invoices'
 import type { PaymentMethod } from '@/types/database'
+import { formatCurrencyDecimal } from '@/lib/currency'
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'cash', label: 'Cash' },
@@ -35,14 +36,6 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'bank_transfer', label: 'Bank Transfer' },
   { value: 'insurance', label: 'Insurance' },
 ]
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
 
 interface PaymentFormValues {
   amount: number
@@ -66,6 +59,8 @@ export function PaymentForm({
   patientId,
   remainingAmount,
 }: PaymentFormProps) {
+  const locale = useLocale()
+  const formatMoney = (amount: number) => formatCurrencyDecimal(amount, locale)
   const t = useTranslations('billing')
   const tc = useTranslations('common')
   const { user, clinic } = useAuth()
@@ -136,7 +131,7 @@ export function PaymentForm({
                 {t('current_balance')}
               </span>
               <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-                {formatCurrency(remainingAmount)}
+                {formatMoney(remainingAmount)}
               </span>
             </div>
             <Separator />
@@ -151,7 +146,7 @@ export function PaymentForm({
                     : 'text-amber-600 dark:text-amber-400'
                 }`}
               >
-                {formatCurrency(newRemaining)}
+                {formatMoney(newRemaining)}
               </span>
             </div>
           </div>

@@ -4,6 +4,7 @@
 import { format } from 'date-fns'
 import type { Tables, PaymentMethod } from '@/types/database'
 import type { Clinic } from '@/providers/auth-provider'
+import { formatCurrencyDecimal } from '@/lib/currency'
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
@@ -12,20 +13,13 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   insurance: 'Insurance',
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
 interface InvoicePdfProps {
   invoice: Tables<'invoices'> & { invoice_items: Tables<'invoice_items'>[] }
   items: Tables<'invoice_items'>[]
   payments: Tables<'payments'>[]
   patient: Tables<'patients'> | null
   clinic: Clinic | null
+  locale?: string
 }
 
 export function InvoicePdf({
@@ -34,7 +28,9 @@ export function InvoicePdf({
   payments,
   patient,
   clinic,
+  locale = 'en',
 }: InvoicePdfProps) {
+  const formatMoney = (amount: number) => formatCurrencyDecimal(amount, locale)
   return (
     <div className="mx-auto max-w-3xl bg-white text-black print:m-0 print:max-w-none print:shadow-none">
       <style
@@ -168,18 +164,18 @@ export function InvoicePdf({
                   {item.quantity}
                 </td>
                 <td className="py-2.5 text-right tabular-nums">
-                  {formatCurrency(item.unit_price)}
+                  {formatMoney(item.unit_price)}
                 </td>
                 <td className="py-2.5 text-right tabular-nums">
                   {item.discount > 0
-                    ? `-${formatCurrency(item.discount)}`
+                    ? `-${formatMoney(item.discount)}`
                     : '—'}
                 </td>
                 <td className="py-2.5 text-right tabular-nums">
-                  {item.tax > 0 ? formatCurrency(item.tax) : '—'}
+                  {item.tax > 0 ? formatMoney(item.tax) : '—'}
                 </td>
                 <td className="py-2.5 text-right font-semibold tabular-nums">
-                  {formatCurrency(item.total)}
+                  {formatMoney(item.total)}
                 </td>
               </tr>
             ))}
@@ -192,14 +188,14 @@ export function InvoicePdf({
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
               <span className="tabular-nums">
-                {formatCurrency(invoice.subtotal)}
+                {formatMoney(invoice.subtotal)}
               </span>
             </div>
             {invoice.discount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Discount</span>
                 <span className="tabular-nums text-red-600">
-                  -{formatCurrency(invoice.discount)}
+                  -{formatMoney(invoice.discount)}
                 </span>
               </div>
             )}
@@ -207,7 +203,7 @@ export function InvoicePdf({
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Tax</span>
                 <span className="tabular-nums">
-                  +{formatCurrency(invoice.tax)}
+                  +{formatMoney(invoice.tax)}
                 </span>
               </div>
             )}
@@ -215,14 +211,14 @@ export function InvoicePdf({
             <div className="flex justify-between text-base font-bold">
               <span>Grand Total</span>
               <span className="tabular-nums">
-                {formatCurrency(invoice.total)}
+                {formatMoney(invoice.total)}
               </span>
             </div>
             <div className="h-px bg-gray-200" />
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Paid</span>
               <span className="tabular-nums text-emerald-600">
-                {formatCurrency(invoice.paid_amount)}
+                {formatMoney(invoice.paid_amount)}
               </span>
             </div>
             <div className="flex justify-between text-sm font-semibold">
@@ -234,7 +230,7 @@ export function InvoicePdf({
                     : 'text-emerald-600'
                 }`}
               >
-                {formatCurrency(invoice.remaining_amount)}
+                {formatMoney(invoice.remaining_amount)}
               </span>
             </div>
           </div>
@@ -273,7 +269,7 @@ export function InvoicePdf({
                       {PAYMENT_METHOD_LABELS[payment.payment_method]}
                     </td>
                     <td className="py-1.5 text-right font-semibold tabular-nums">
-                      {formatCurrency(payment.amount)}
+                      {formatMoney(payment.amount)}
                     </td>
                     <td className="py-1.5 text-gray-500">
                       {payment.notes ?? '—'}

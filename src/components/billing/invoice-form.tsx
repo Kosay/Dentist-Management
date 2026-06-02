@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { Plus, Trash2, ClipboardList } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -32,6 +32,7 @@ import { useCreateInvoice } from '@/hooks/use-invoices'
 import { usePatients } from '@/hooks/use-patients'
 import { useTreatmentPlans } from '@/hooks/use-treatments'
 import type { Tables } from '@/types/database'
+import { formatCurrencyDecimal } from '@/lib/currency'
 
 interface InvoiceItemValues {
   description: string
@@ -56,22 +57,16 @@ interface InvoiceFormProps {
   invoice?: Tables<'invoices'>
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
 export function InvoiceForm({
   open,
   onOpenChange,
   patientId,
   invoice,
 }: InvoiceFormProps) {
+  const locale = useLocale()
   const t = useTranslations('billing')
   const tc = useTranslations('common')
+  const formatMoney = (amount: number) => formatCurrencyDecimal(amount, locale)
   const { user, clinic } = useAuth()
   const createMutation = useCreateInvoice()
   const { data: patients = [] } = usePatients()
@@ -387,7 +382,7 @@ export function InvoiceForm({
                           {t('line_total')}
                         </Label>
                         <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm font-semibold tabular-nums">
-                          {formatCurrency(lineTotal)}
+                          {formatMoney(lineTotal)}
                         </div>
                       </div>
                     </div>
@@ -400,26 +395,26 @@ export function InvoiceForm({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('subtotal')}</span>
                 <span className="tabular-nums">
-                  {formatCurrency(calculations.subtotal)}
+                  {formatMoney(calculations.subtotal)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('discount')}</span>
                 <span className="tabular-nums text-red-500">
-                  -{formatCurrency(calculations.totalDiscount)}
+                  -{formatMoney(calculations.totalDiscount)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t('tax')}</span>
                 <span className="tabular-nums">
-                  +{formatCurrency(calculations.totalTax)}
+                  +{formatMoney(calculations.totalTax)}
                 </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between font-semibold">
                 <span>{t('grand_total')}</span>
                 <span className="text-lg tabular-nums">
-                  {formatCurrency(calculations.grandTotal)}
+                  {formatMoney(calculations.grandTotal)}
                 </span>
               </div>
             </div>

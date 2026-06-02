@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { CONDITION_COLORS, CONDITIONS, getDisplayQuadrantLabel, type ToothData } from './tooth-data'
-import type { ToothState } from '@/hooks/use-odontogram'
+import type { ToothState } from '@/hooks/use-dental-chart'
 import { ToothXraySection } from './tooth-xray-section'
 
 interface ToothDetailPanelProps {

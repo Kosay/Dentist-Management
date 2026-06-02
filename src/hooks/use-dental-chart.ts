@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
 import type {
   Tables,
+  InsertTables,
   UpdateTables,
   ToothCondition,
   ToothSurface,
@@ -13,6 +15,7 @@ import type {
 import {
   PERMANENT_TEETH,
   PRIMARY_TEETH,
+  getDisplayQuadrantLabel,
   type ToothData,
 } from '@/components/odontogram/tooth-data'
 import type { SurfaceCondition } from '@/components/odontogram/tooth-data'
@@ -22,6 +25,8 @@ type ToothRecord = Tables<'tooth_records'>
 type SurfaceRecord = Tables<'surface_records'>
 type ToothRecordUpdate = UpdateTables<'tooth_records'>
 type SurfaceRecordUpdate = UpdateTables<'surface_records'>
+type ToothRecordInsert = InsertTables<'tooth_records'>
+type SurfaceRecordInsert = InsertTables<'surface_records'>
 
 type DentalChartWithRecords = DentalChart & {
   tooth_records: (ToothRecord & {
@@ -33,6 +38,17 @@ export interface ToothState {
   condition: ToothCondition
   surfaces: SurfaceCondition[]
   notes: string
+}
+
+function buildDefaultState(tooth: ToothData): ToothState {
+  return {
+    condition: 'healthy',
+    surfaces: tooth.surfaces.map((surface) => ({
+      surface,
+      condition: 'healthy' as ToothCondition,
+    })),
+    notes: '',
+  }
 }
 
 interface UseDentalChartOptions {
@@ -54,14 +70,17 @@ export function useDentalChart({
 
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null)
   const [localStates, setLocalStates] = useState<Record<number, ToothState>>({})
+  const [isSaving, setIsSaving] = useState(false)
 
   const allTeeth = useMemo(
     () => (isPrimary ? PRIMARY_TEETH : PERMANENT_TEETH),
     [isPrimary]
   )
 
+  const queryKey = ['dental_chart', clinic?.id, patientId, isPrimary] as const
+
   const queryResult = useQuery<DentalChartWithRecords | null, Error>({
-    queryKey: ['dental_chart', clinic?.id, patientId, isPrimary],
+    queryKey,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('dental_charts')
@@ -78,33 +97,32 @@ export function useDentalChart({
 
   useEffect(() => {
     const chart = queryResult.data
-    if (!chart) return
-
     const states: Record<number, ToothState> = {}
+
     for (const tooth of allTeeth) {
-      const record = chart.tooth_records?.find(
+      const record = chart?.tooth_records?.find(
         (r) => r.tooth_number === tooth.number
       )
+
       if (record) {
         states[tooth.number] = {
           condition: record.condition,
-          surfaces: tooth.surfaces.map((s) => {
-            const sr = record.surface_records?.find((r) => r.surface === s)
-            return { surface: s, condition: sr?.condition ?? 'healthy' }
+          surfaces: tooth.surfaces.map((surface) => {
+            const surfaceRecord = record.surface_records?.find(
+              (r) => r.surface === surface
+            )
+            return {
+              surface,
+              condition: surfaceRecord?.condition ?? 'healthy',
+            }
           }),
           notes: record.notes ?? '',
         }
       } else {
-        states[tooth.number] = {
-          condition: 'healthy',
-          surfaces: tooth.surfaces.map((s) => ({
-            surface: s,
-            condition: 'healthy' as ToothCondition,
-          })),
-          notes: '',
-        }
+        states[tooth.number] = buildDefaultState(tooth)
       }
     }
+
     setLocalStates(states)
   }, [queryResult.data, allTeeth])
 
@@ -150,10 +168,142 @@ export function useDentalChart({
     },
   })
 
-  const getToothState = useCallback(
-    (toothNumber: number): ToothState | undefined => {
-      return localStates[toothNumber]
+  const getOrCreateChart = useCallback(async (): Promise<DentalChartWithRecords> => {
+    if (!clinic?.id) {
+      throw new Error('Clinic not found')
+    }
+
+    if (queryResult.data) {
+      return queryResult.data
+    }
+
+    const { data, error } = await supabase
+      .from('dental_charts')
+      .insert({
+        clinic_id: clinic.id,
+        patient_id: patientId,
+        is_primary: isPrimary,
+      } as never)
+      .select('*, tooth_records(*, surface_records(*))')
+      .single()
+
+    if (error) throw error
+
+    const chart = data as unknown as DentalChartWithRecords
+    queryClient.setQueryData(queryKey, chart)
+    return chart
+  }, [clinic?.id, queryResult.data, patientId, isPrimary, supabase, queryClient, queryKey])
+
+  const getOrCreateToothRecord = useCallback(
+    async (
+      chart: DentalChartWithRecords,
+      tooth: ToothData,
+      state: ToothState
+    ): Promise<ToothRecord & { surface_records: SurfaceRecord[] }> => {
+      if (!clinic?.id) {
+        throw new Error('Clinic not found')
+      }
+
+      let existing = chart.tooth_records?.find(
+        (record) => record.tooth_number === tooth.number
+      )
+
+      if (!existing) {
+        const { data: existingRow, error: lookupError } = await supabase
+          .from('tooth_records')
+          .select('*, surface_records(*)')
+          .eq('chart_id', chart.id)
+          .eq('tooth_number', tooth.number)
+          .maybeSingle()
+
+        if (lookupError) throw lookupError
+        if (existingRow) {
+          existing = existingRow as unknown as ToothRecord & {
+            surface_records: SurfaceRecord[]
+          }
+        }
+      }
+
+      if (existing) {
+        return existing
+      }
+
+      const toothInsert: ToothRecordInsert = {
+        chart_id: chart.id,
+        clinic_id: clinic.id,
+        tooth_number: tooth.number,
+        tooth_name: tooth.nameKey,
+        quadrant: getDisplayQuadrantLabel(tooth.quadrant, isPrimary),
+        position: tooth.position,
+        condition: state.condition,
+        notes: state.notes || null,
+      }
+
+      const { data: toothRecord, error: toothError } = await supabase
+        .from('tooth_records')
+        .insert(toothInsert as never)
+        .select()
+        .single()
+
+      if (toothError) throw toothError
+
+      const record = toothRecord as unknown as ToothRecord
+
+      const surfaceInserts: SurfaceRecordInsert[] = state.surfaces.map(
+        (surfaceState) => ({
+          tooth_record_id: record.id,
+          clinic_id: clinic.id,
+          surface: surfaceState.surface,
+          condition: surfaceState.condition,
+        })
+      )
+
+      const { data: surfaceRecords, error: surfaceError } = await supabase
+        .from('surface_records')
+        .insert(surfaceInserts as never)
+        .select()
+
+      if (surfaceError) throw surfaceError
+
+      const fullRecord = {
+        ...record,
+        surface_records: (surfaceRecords ?? []) as unknown as SurfaceRecord[],
+      }
+
+      queryClient.setQueryData<DentalChartWithRecords | null>(queryKey, (current) => {
+        if (!current) {
+          return { ...chart, tooth_records: [fullRecord] }
+        }
+        const withoutDuplicate = (current.tooth_records ?? []).filter(
+          (item) => item.tooth_number !== tooth.number
+        )
+        return {
+          ...current,
+          tooth_records: [...withoutDuplicate, fullRecord],
+        }
+      })
+
+      return fullRecord
     },
+    [clinic?.id, isPrimary, supabase, queryClient, queryKey]
+  )
+
+  const resolveToothRecord = useCallback(
+    async (toothNumber: number, stateOverride?: ToothState) => {
+      const tooth = allTeeth.find((item) => item.number === toothNumber)
+      const state = stateOverride ?? localStates[toothNumber]
+      if (!tooth || !state) {
+        throw new Error('Tooth not found')
+      }
+
+      const chart = await getOrCreateChart()
+      return getOrCreateToothRecord(chart, tooth, state)
+    },
+    [allTeeth, localStates, getOrCreateChart, getOrCreateToothRecord]
+  )
+
+  const getToothState = useCallback(
+    (toothNumber: number): ToothState | undefined => localStates[toothNumber],
     [localStates]
   )
 
@@ -170,85 +320,127 @@ export function useDentalChart({
   const setToothCondition = useCallback(
     (toothNumber: number, condition: ToothCondition) => {
       if (readOnly) return
+
+      const tooth = allTeeth.find((item) => item.number === toothNumber)
+      if (!tooth) return
+
+      const nextState: ToothState = {
+        ...(localStates[toothNumber] ?? buildDefaultState(tooth)),
+        condition,
+      }
+
       setLocalStates((prev) => ({
         ...prev,
-        [toothNumber]: {
-          ...prev[toothNumber],
-          condition,
-        },
+        [toothNumber]: nextState,
       }))
 
-      const chart = queryResult.data
-      if (!chart) return
-      const record = chart.tooth_records?.find(
-        (r) => r.tooth_number === toothNumber
-      )
-      if (record) {
-        updateToothMutation.mutate({ id: record.id, data: { condition } })
-      }
+      void (async () => {
+        setIsSaving(true)
+        try {
+          const record = await resolveToothRecord(toothNumber, nextState)
+          await updateToothMutation.mutateAsync({
+            id: record.id,
+            data: { condition },
+          })
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Failed to save tooth'
+          toast.error(message)
+        } finally {
+          setIsSaving(false)
+        }
+      })()
     },
-    [readOnly, queryResult.data, updateToothMutation]
+    [readOnly, allTeeth, localStates, resolveToothRecord, updateToothMutation]
   )
 
   const setSurfaceCondition = useCallback(
     (toothNumber: number, surface: ToothSurface, condition: ToothCondition) => {
       if (readOnly) return
-      setLocalStates((prev) => {
-        const state = prev[toothNumber]
-        if (!state) return prev
-        return {
-          ...prev,
-          [toothNumber]: {
-            ...state,
-            surfaces: state.surfaces.map((s) =>
-              s.surface === surface ? { ...s, condition } : s
-            ),
-          },
-        }
-      })
 
-      const chart = queryResult.data
-      if (!chart) return
-      const record = chart.tooth_records?.find(
-        (r) => r.tooth_number === toothNumber
-      )
-      if (record) {
-        const sr = record.surface_records?.find((r) => r.surface === surface)
-        if (sr) {
-          updateSurfaceMutation.mutate({ id: sr.id, data: { condition } })
-        }
+      const tooth = allTeeth.find((item) => item.number === toothNumber)
+      const current = localStates[toothNumber] ?? (tooth ? buildDefaultState(tooth) : null)
+      if (!current) return
+
+      const nextState: ToothState = {
+        ...current,
+        surfaces: current.surfaces.map((surfaceState) =>
+          surfaceState.surface === surface
+            ? { ...surfaceState, condition }
+            : surfaceState
+        ),
       }
+
+      setLocalStates((prev) => ({
+        ...prev,
+        [toothNumber]: nextState,
+      }))
+
+      void (async () => {
+        setIsSaving(true)
+        try {
+          const record = await resolveToothRecord(toothNumber, nextState)
+          const surfaceRecord = record.surface_records?.find(
+            (item) => item.surface === surface
+          )
+          if (!surfaceRecord) {
+            throw new Error('Surface record not found')
+          }
+          await updateSurfaceMutation.mutateAsync({
+            id: surfaceRecord.id,
+            data: { condition },
+          })
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Failed to save surface'
+          toast.error(message)
+        } finally {
+          setIsSaving(false)
+        }
+      })()
     },
-    [readOnly, queryResult.data, updateSurfaceMutation]
+    [readOnly, allTeeth, localStates, resolveToothRecord, updateSurfaceMutation]
   )
 
   const setToothNotes = useCallback(
     (toothNumber: number, notes: string) => {
       if (readOnly) return
+
+      const tooth = allTeeth.find((item) => item.number === toothNumber)
+      const current = localStates[toothNumber] ?? (tooth ? buildDefaultState(tooth) : null)
+      if (!current) return
+
+      const nextState: ToothState = { ...current, notes }
+
       setLocalStates((prev) => ({
         ...prev,
-        [toothNumber]: {
-          ...prev[toothNumber],
-          notes,
-        },
+        [toothNumber]: nextState,
       }))
 
-      const chart = queryResult.data
-      if (!chart) return
-      const record = chart.tooth_records?.find(
-        (r) => r.tooth_number === toothNumber
-      )
-      if (record) {
-        updateToothMutation.mutate({ id: record.id, data: { notes } })
-      }
+      void (async () => {
+        setIsSaving(true)
+        try {
+          const record = await resolveToothRecord(toothNumber, nextState)
+          await updateToothMutation.mutateAsync({
+            id: record.id,
+            data: { notes },
+          })
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Failed to save notes'
+          toast.error(message)
+        } finally {
+          setIsSaving(false)
+        }
+      })()
     },
-    [readOnly, queryResult.data, updateToothMutation]
+    [readOnly, allTeeth, localStates, resolveToothRecord, updateToothMutation]
   )
 
   const selectedToothData = useMemo(
     (): ToothData | undefined =>
       selectedTooth !== null
-        ? allTeeth.find((t) => t.number === selectedTooth)
+        ? allTeeth.find((tooth) => tooth.number === selectedTooth)
         : undefined,
     [selectedTooth, allTeeth]
   )
@@ -261,6 +453,7 @@ export function useDentalChart({
 
   return {
     ...queryResult,
+    isSaving,
     selectedTooth,
     selectTooth,
     getToothState,

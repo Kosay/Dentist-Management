@@ -2,9 +2,11 @@
 
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useLocale } from 'next-intl'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
+import { formatCurrency } from '@/lib/currency'
 import type { TreatmentStatus } from '@/types/database'
 
 export interface DashboardStats {
@@ -153,6 +155,8 @@ export function useTodayAppointments() {
 }
 
 export function useDashboardStatsViewModel(stats: DashboardStats | undefined) {
+  const locale = useLocale()
+
   return useMemo(
     () => [
       {
@@ -165,21 +169,13 @@ export function useDashboardStatsViewModel(stats: DashboardStats | undefined) {
       },
       {
         key: 'monthly_revenue' as const,
-        value: new Intl.NumberFormat(undefined, {
-          style: 'currency',
-          currency: 'USD',
-          maximumFractionDigits: 0,
-        }).format(stats?.monthlyRevenue ?? 0),
+        value: formatCurrency(stats?.monthlyRevenue ?? 0, locale),
       },
       {
         key: 'outstanding' as const,
-        value: new Intl.NumberFormat(undefined, {
-          style: 'currency',
-          currency: 'USD',
-          maximumFractionDigits: 0,
-        }).format(stats?.outstandingBalance ?? 0),
+        value: formatCurrency(stats?.outstandingBalance ?? 0, locale),
       },
     ],
-    [stats]
+    [stats, locale]
   )
 }
