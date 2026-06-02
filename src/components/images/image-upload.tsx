@@ -28,8 +28,9 @@ import { useVisits } from '@/hooks/use-visits'
 import { useTreatmentPlans } from '@/hooks/use-treatments'
 import { getTreatmentTypeLabel } from '@/lib/treatment-types'
 import {
+  getMaxImageSizeMb,
+  isAcceptedImageFile,
   isWithinImageSizeLimit,
-  MAX_IMAGE_SIZE_MB,
 } from '@/lib/image-upload-limits'
 import { Upload, X, FileImage, Loader2 } from 'lucide-react'
 import type { ImageCategory } from '@/types/database'
@@ -81,6 +82,7 @@ export function ImageUpload({
   const [previews, setPreviews] = useState<string[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const form = useForm<UploadFormValues>({
@@ -90,11 +92,19 @@ export function ImageUpload({
     },
   })
 
-  const handleFiles = useCallback((newFiles: FileList | File[]) => {
+  const selectedCategory = form.watch('category')
+
+  const handleFiles = useCallback(
+    (newFiles: FileList | File[]) => {
     const validFiles = Array.from(newFiles).filter((f) => {
-      if (!ACCEPTED_TYPES.includes(f.type)) return false
-      if (!isWithinImageSizeLimit(f)) {
-        toast.error(t('size_limit_error', { max: MAX_IMAGE_SIZE_MB }))
+      if (!isAcceptedImageFile(f) && !ACCEPTED_TYPES.includes(f.type)) {
+        toast.error(t('supported_formats'))
+        return false
+      }
+      if (!isWithinImageSizeLimit(f, selectedCategory)) {
+        toast.error(
+          t('size_limit_error', { max: getMaxImageSizeMb(selectedCategory) })
+        )
         return false
       }
       return true
@@ -112,7 +122,9 @@ export function ImageUpload({
         setPreviews((prev) => [...prev, ''])
       }
     })
-  }, [t])
+  },
+    [t, selectedCategory]
+  )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -143,27 +155,38 @@ export function ImageUpload({
   const onSubmit = async (values: UploadFormValues) => {
     if (files.length === 0) return
 
-    setUploadProgress(0)
+    setIsUploading(true)
+    setUploadProgress(5)
     const total = files.length
 
-    for (let i = 0; i < total; i++) {
-      await uploadMutation.mutateAsync({
-        file: files[i],
-        patientId,
-        category: values.category,
-        description: values.description,
-        toothNumber: values.tooth_number,
-        visitId: values.visit_id,
-        treatmentPlanId: values.treatment_plan_id,
-      })
-      setUploadProgress(Math.round(((i + 1) / total) * 100))
-    }
+    try {
+      for (let i = 0; i < total; i++) {
+        setUploadProgress(Math.max(5, Math.round((i / total) * 100)))
+        await uploadMutation.mutateAsync({
+          file: files[i],
+          patientId,
+          category: values.category,
+          description: values.description,
+          toothNumber: values.tooth_number,
+          visitId: values.visit_id || undefined,
+          treatmentPlanId: values.treatment_plan_id || undefined,
+        })
+        setUploadProgress(Math.round(((i + 1) / total) * 100))
+      }
 
-    setFiles([])
-    setPreviews([])
-    setUploadProgress(0)
-    form.reset()
-    onOpenChange(false)
+      toast.success(tc('messages.save_success'))
+      setFiles([])
+      setPreviews([])
+      form.reset()
+      onOpenChange(false)
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : tc('messages.save_error')
+      toast.error(message)
+    } finally {
+      setUploadProgress(0)
+      setIsUploading(false)
+    }
   }
 
   const handleClose = (isOpen: boolean) => {
@@ -176,7 +199,7 @@ export function ImageUpload({
     onOpenChange(isOpen)
   }
 
-  const isPending = uploadMutation.isPending
+  const isPending = isUploading || uploadMutation.isPending
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -379,16 +402,23 @@ export function ImageUpload({
               />
             </div>
 
-            {isPending && uploadProgress > 0 && (
+            {isPending && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Uploading...</span>
-                  <span>{uploadProgress}%</span>
+                  <span>{tc('buttons.loading')}</span>
+                  <span>{uploadProgress > 0 ? `${uploadProgress}%` : '…'}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${uploadProgress}%` }}
+                    className={cn(
+                      'h-full rounded-full bg-primary transition-all',
+                      uploadProgress === 0 && 'w-1/3 animate-pulse'
+                    )}
+                    style={
+                      uploadProgress > 0
+                        ? { width: `${uploadProgress}%` }
+                        : undefined
+                    }
                   />
                 </div>
               </div>

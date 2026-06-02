@@ -8,6 +8,7 @@ import {
   PATIENT_FILES_BUCKET,
   resolvePatientFileUrl,
 } from '@/lib/patient-file-storage'
+import { getMaxImageSizeBytes } from '@/lib/image-upload-limits'
 import type { Tables, InsertTables, ImageCategory } from '@/types/database'
 
 type PatientImage = Tables<'patient_images'>
@@ -78,8 +79,11 @@ export function useUploadImage() {
       treatmentPlanId,
     }) => {
       if (!clinic?.id || !user?.id) throw new Error('Not authenticated')
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('File exceeds 5 MB limit')
+
+      const maxBytes = getMaxImageSizeBytes(category)
+      if (file.size > maxBytes) {
+        const maxMb = Math.round(maxBytes / (1024 * 1024))
+        throw new Error(`File exceeds ${maxMb} MB limit`)
       }
 
       const fileExt = file.name.split('.').pop()
@@ -96,6 +100,7 @@ export function useUploadImage() {
         .upload(storagePath, file, {
           cacheControl: '3600',
           upsert: false,
+          contentType: file.type || undefined,
         })
 
       if (uploadError) throw uploadError

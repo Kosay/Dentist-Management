@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl'
 import type { ToothSurface } from '@/types/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useOdontogram } from '@/hooks/use-odontogram'
+import { useDentalChart } from '@/hooks/use-dental-chart'
+import { LoadingSpinner } from '@/components/shared/loading-spinner'
 import { getUpperArch, getLowerArch, type ToothData } from './tooth-data'
 import { OdontogramLegend } from './odontogram-legend'
 import { ToothDetailPanel } from './tooth-detail-panel'
@@ -26,7 +27,7 @@ function ToothRow({
 }: {
   teeth: ToothData[]
   isUpper: boolean
-  chart: ReturnType<typeof useOdontogram>
+  chart: ReturnType<typeof useDentalChart>
   readOnly: boolean
   midIndex: number
 }) {
@@ -73,19 +74,24 @@ export function DentalChart({
 }: DentalChartProps) {
   const t = useTranslations('odontogram')
 
-  const chart = useOdontogram({
+  const chart = useDentalChart({
     patientId,
     isPrimary: initialIsPrimary,
     readOnly,
     onToothClick,
-    onSurfaceClick: onSurfaceExternalClick
-      ? (toothNumber, surface) => onSurfaceExternalClick(toothNumber, surface)
-      : undefined,
   })
 
   const upperTeeth = getUpperArch(initialIsPrimary)
   const lowerTeeth = getLowerArch(initialIsPrimary)
   const midIndex = initialIsPrimary ? 5 : 8
+
+  if (chart.isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <LoadingSpinner size={32} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">

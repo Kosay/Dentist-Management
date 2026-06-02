@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   CreditCard,
   Printer,
@@ -32,6 +32,7 @@ import { usePatient } from '@/hooks/use-patients'
 import { useAuth } from '@/providers/auth-provider'
 import type { InvoiceStatus, PaymentMethod } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { formatCurrencyDecimal } from '@/lib/currency'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
@@ -48,19 +49,13 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   insurance: 'Insurance',
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
 interface InvoiceDetailProps {
   invoiceId: string
 }
 
 export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
+  const locale = useLocale()
+  const formatMoney = (amount: number) => formatCurrencyDecimal(amount, locale)
   const t = useTranslations('billing')
   const tc = useTranslations('common')
   const { clinic } = useAuth()
@@ -108,6 +103,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
         payments={payments}
         patient={patient ?? null}
         clinic={clinic ?? null}
+        locale={locale}
       />
     )
   }
@@ -246,18 +242,18 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                         {item.quantity}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatCurrency(item.unit_price)}
+                        {formatMoney(item.unit_price)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-red-500">
                         {item.discount > 0
-                          ? `-${formatCurrency(item.discount)}`
+                          ? `-${formatMoney(item.discount)}`
                           : '—'}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {item.tax > 0 ? formatCurrency(item.tax) : '—'}
+                        {item.tax > 0 ? formatMoney(item.tax) : '—'}
                       </TableCell>
                       <TableCell className="text-right font-semibold tabular-nums">
-                        {formatCurrency(item.total)}
+                        {formatMoney(item.total)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -273,7 +269,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t('subtotal')}</span>
                   <span className="tabular-nums">
-                    {formatCurrency(invoice.subtotal)}
+                    {formatMoney(invoice.subtotal)}
                   </span>
                 </div>
                 {invoice.discount > 0 && (
@@ -282,7 +278,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                       {t('discount')}
                     </span>
                     <span className="tabular-nums text-red-500">
-                      -{formatCurrency(invoice.discount)}
+                      -{formatMoney(invoice.discount)}
                     </span>
                   </div>
                 )}
@@ -290,7 +286,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{t('tax')}</span>
                     <span className="tabular-nums">
-                      +{formatCurrency(invoice.tax)}
+                      +{formatMoney(invoice.tax)}
                     </span>
                   </div>
                 )}
@@ -298,7 +294,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                 <div className="flex items-center justify-between font-semibold">
                   <span>{t('grand_total')}</span>
                   <span className="text-lg tabular-nums">
-                    {formatCurrency(invoice.total)}
+                    {formatMoney(invoice.total)}
                   </span>
                 </div>
               </div>
@@ -334,7 +330,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                   {t('total')}
                 </span>
                 <span className="font-semibold tabular-nums">
-                  {formatCurrency(invoice.total)}
+                  {formatMoney(invoice.total)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -342,7 +338,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                   {t('paid')}
                 </span>
                 <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(invoice.paid_amount)}
+                  {formatMoney(invoice.paid_amount)}
                 </span>
               </div>
               <Separator />
@@ -356,7 +352,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                       : 'text-emerald-600 dark:text-emerald-400'
                   )}
                 >
-                  {formatCurrency(remaining)}
+                  {formatMoney(remaining)}
                 </span>
               </div>
 
@@ -393,7 +389,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-semibold tabular-nums">
-                          {formatCurrency(payment.amount)}
+                          {formatMoney(payment.amount)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(

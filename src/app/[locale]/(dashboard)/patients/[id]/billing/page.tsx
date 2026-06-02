@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   Plus,
   DollarSign,
@@ -26,6 +26,7 @@ import { InvoiceDetail } from '@/components/billing/invoice-detail'
 import { useInvoices } from '@/hooks/use-invoices'
 import type { InvoiceStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { formatCurrencyDecimal } from '@/lib/currency'
 
 const STATUS_STYLES: Record<InvoiceStatus, string> = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
@@ -35,19 +36,13 @@ const STATUS_STYLES: Record<InvoiceStatus, string> = {
   cancelled: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400',
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(amount)
-}
-
 export default function PatientBillingPage() {
   const params = useParams()
   const patientId = params.id as string
+  const locale = useLocale()
   const t = useTranslations('billing')
   const tc = useTranslations('common')
+  const formatMoney = (amount: number) => formatCurrencyDecimal(amount, locale)
 
   const { data: invoices = [], isLoading } = useInvoices(patientId)
 
@@ -98,7 +93,7 @@ export default function PatientBillingPage() {
       label: t('total'),
       render: (item) => (
         <span className="font-semibold tabular-nums">
-          {formatCurrency(item.total as number)}
+          {formatMoney(item.total as number)}
         </span>
       ),
     },
@@ -107,7 +102,7 @@ export default function PatientBillingPage() {
       label: t('paid'),
       render: (item) => (
         <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
-          {formatCurrency(item.paid_amount as number)}
+          {formatMoney(item.paid_amount as number)}
         </span>
       ),
     },
@@ -125,7 +120,7 @@ export default function PatientBillingPage() {
                 : 'text-muted-foreground'
             )}
           >
-            {formatCurrency(remaining)}
+            {formatMoney(remaining)}
           </span>
         )
       },
@@ -201,17 +196,17 @@ export default function PatientBillingPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatsCard
           title={t('total_billed')}
-          value={formatCurrency(stats.totalBilled)}
+          value={formatMoney(stats.totalBilled)}
           icon={Receipt}
         />
         <StatsCard
           title={t('total_paid')}
-          value={formatCurrency(stats.totalPaid)}
+          value={formatMoney(stats.totalPaid)}
           icon={DollarSign}
         />
         <StatsCard
           title={t('outstanding_balance')}
-          value={formatCurrency(stats.outstanding)}
+          value={formatMoney(stats.outstanding)}
           icon={AlertCircle}
         />
       </div>
@@ -269,7 +264,7 @@ export default function PatientBillingPage() {
                       </div>
                     </div>
                     <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(inv.paid_amount)}
+                      {formatMoney(inv.paid_amount)}
                     </span>
                   </div>
                 ))}

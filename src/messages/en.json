@@ -463,7 +463,7 @@
     "image_notes": "Image Notes",
     "no_images": "No images uploaded",
     "drag_drop": "Drag and drop images here or click to upload",
-    "supported_formats": "Supported formats: JPG, PNG, WebP (max 5 MB)",
+    "supported_formats": "Supported formats: JPG, PNG, WebP, GIF (max 5 MB; panoramic up to 15 MB)",
     "size_limit_error": "Each file must be smaller than {max} MB",
     "panoramic_tab_hint": "Upload full-mouth panoramic images in the Images tab"
   },
