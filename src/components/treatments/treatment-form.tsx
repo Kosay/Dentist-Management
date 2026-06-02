@@ -19,7 +19,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -34,6 +37,11 @@ import {
   getTreatmentTypeLabel,
   normalizeTreatmentType,
 } from '@/lib/treatment-types'
+import {
+  PERMANENT_TEETH,
+  PRIMARY_TEETH,
+  getTeethByQuadrant,
+} from '@/components/odontogram/tooth-data'
 import type { Tables, TreatmentStatus, ToothSurface } from '@/types/database'
 
 const SURFACES: ToothSurface[] = [
@@ -52,6 +60,20 @@ const STATUSES: TreatmentStatus[] = [
   'cancelled',
 ]
 
+// Build grouped tooth options from FDI tooth data
+const PERMANENT_QUADRANT_LABELS: Record<number, string> = {
+  1: 'Upper Right',
+  2: 'Upper Left',
+  3: 'Lower Left',
+  4: 'Lower Right',
+}
+const PRIMARY_QUADRANT_LABELS: Record<number, string> = {
+  5: 'Primary Upper Right',
+  6: 'Primary Upper Left',
+  7: 'Primary Lower Left',
+  8: 'Primary Lower Right',
+}
+
 interface FormValues {
   tooth_number?: number
   surfaces: string[]
@@ -69,6 +91,7 @@ interface TreatmentFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   patientId: string
+  initialToothNumber?: number
   treatment?: Tables<'treatment_plans'>
 }
 
@@ -76,6 +99,7 @@ export function TreatmentForm({
   open,
   onOpenChange,
   patientId,
+  initialToothNumber,
   treatment,
 }: TreatmentFormProps) {
   const t = useTranslations('treatments')
@@ -89,7 +113,7 @@ export function TreatmentForm({
 
   const form = useForm<FormValues>({
     defaultValues: {
-      tooth_number: undefined,
+      tooth_number: initialToothNumber,
       surfaces: [],
       diagnosis: '',
       treatment_type: '',
@@ -118,7 +142,7 @@ export function TreatmentForm({
       })
     } else {
       form.reset({
-        tooth_number: undefined,
+        tooth_number: initialToothNumber,
         surfaces: [],
         diagnosis: '',
         treatment_type: '',
@@ -130,7 +154,7 @@ export function TreatmentForm({
         notes: '',
       })
     }
-  }, [treatment, form])
+  }, [treatment, initialToothNumber, form])
 
   const watchedCost = form.watch('cost')
   const watchedDiscount = form.watch('discount')
@@ -201,16 +225,46 @@ export function TreatmentForm({
                       }
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('tooth')} />
+                        <SelectValue placeholder={t('select_tooth')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {Array.from({ length: 32 }, (_, i) => i + 1).map(
-                          (n) => (
-                            <SelectItem key={n} value={n.toString()}>
-                              {n}
-                            </SelectItem>
+                        {/* Permanent teeth grouped by quadrant */}
+                        {([1, 2, 3, 4] as const).map((q) => {
+                          const teeth = getTeethByQuadrant(PERMANENT_TEETH, q)
+                          const label = PERMANENT_QUADRANT_LABELS[q]
+                          return (
+                            <SelectGroup key={q}>
+                              <SelectLabel>{label}</SelectLabel>
+                              {teeth.map((tooth) => (
+                                <SelectItem
+                                  key={tooth.number}
+                                  value={tooth.number.toString()}
+                                >
+                                  {tooth.displayLabel} — {tOdontogram(`tooth_names.${tooth.nameKey}`)} ({tooth.number})
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
                           )
-                        )}
+                        })}
+                        <SelectSeparator />
+                        {/* Primary teeth grouped by quadrant */}
+                        {([5, 6, 7, 8] as const).map((q) => {
+                          const teeth = getTeethByQuadrant(PRIMARY_TEETH, q)
+                          const label = PRIMARY_QUADRANT_LABELS[q]
+                          return (
+                            <SelectGroup key={q}>
+                              <SelectLabel>{label}</SelectLabel>
+                              {teeth.map((tooth) => (
+                                <SelectItem
+                                  key={tooth.number}
+                                  value={tooth.number.toString()}
+                                >
+                                  {tooth.displayLabel} — {tOdontogram(`tooth_names.${tooth.nameKey}`)} ({tooth.number})
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
                   )}

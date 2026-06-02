@@ -5,6 +5,8 @@ import { Inter, Noto_Sans_Arabic } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { Toaster } from '@/components/ui/sonner';
 import { locales, type Locale } from '@/lib/i18n';
+import AuthProvider from '@/providers/auth-provider';
+import QueryProvider from '@/providers/query-provider';
 import '../globals.css';
 
 const inter = Inter({
@@ -44,10 +46,16 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <html lang={locale} dir={dir} className={`${inter.variable} ${notoSansArabic.variable} h-full antialiased`}>
       <body className={`${fontClass} min-h-full flex flex-col`}>
-        <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
-          {children}
-          <Toaster position={dir === 'rtl' ? 'top-left' : 'top-right'} dir={dir} />
-        </NextIntlClientProvider>
+        {/* AuthProvider and QueryProvider are OUTSIDE the key={locale} boundary so they
+            survive locale switches without resetting auth state or query cache. */}
+        <AuthProvider>
+          <QueryProvider>
+            <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
+              {children}
+              <Toaster position={dir === 'rtl' ? 'top-left' : 'top-right'} dir={dir} />
+            </NextIntlClientProvider>
+          </QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -97,6 +97,8 @@ export const CONDITION_COLORS: Record<ToothCondition, string> = {
   completed: '#22C55E',
   diseased: '#EF4444',
   missing: '#9CA3AF',
+  implant_planned: '#8B5CF6',
+  denture_planned: '#F97316',
 }
 
 export const CONDITIONS: ToothCondition[] = [
@@ -106,6 +108,8 @@ export const CONDITIONS: ToothCondition[] = [
   'completed',
   'diseased',
   'missing',
+  'implant_planned',
+  'denture_planned',
 ]
 
 export function getTeethByQuadrant(teeth: ToothData[], quadrant: number): ToothData[] {
@@ -135,4 +139,25 @@ export function getDisplayQuadrantLabel(quadrant: number, isPrimary: boolean): n
     return quadrant - 4
   }
   return quadrant
+}
+
+const TREATMENT_TYPE_CODES: Record<string, string> = {
+  crown: 'Cr',
+  bridge: 'Br',
+  implant: 'Im',
+  root_canal: 'RC',
+  veneer: 'Ve',
+  denture: 'De',
+}
+
+export function getTreatmentTypeCode(treatmentType: string): string | undefined {
+  return TREATMENT_TYPE_CODES[treatmentType]
+}
+
+export function getToothFDILabel(toothNumber: number | null): string {
+  if (!toothNumber) return '—'
+  const allTeeth = toothNumber >= 51 ? PRIMARY_TEETH : PERMANENT_TEETH
+  const tooth = allTeeth.find((t) => t.number === toothNumber)
+  if (!tooth) return `#${toothNumber}`
+  return `${toothNumber} (${tooth.displayLabel})`
 }

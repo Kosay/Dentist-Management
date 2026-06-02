@@ -20,6 +20,7 @@ import {
 import { ConfirmDialog } from '@/components/shared/confirm-dialog'
 import { useUpdateTreatmentPlan } from '@/hooks/use-treatments'
 import { getTreatmentTypeLabel } from '@/lib/treatment-types'
+import { getToothFDILabel } from '@/components/odontogram/tooth-data'
 import { MoreVertical, Pencil, Trash2, ArrowRightCircle } from 'lucide-react'
 import type { Tables, TreatmentStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
@@ -84,8 +85,8 @@ export function TreatmentCard({
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-3">
               {treatment.tooth_number && (
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
-                  #{treatment.tooth_number}
+                <div className="flex h-10 min-w-10 items-center justify-center rounded-lg bg-primary/10 px-2 text-xs font-bold text-primary tabular-nums">
+                  {getToothFDILabel(treatment.tooth_number)}
                 </div>
               )}
               <div>

@@ -14,6 +14,7 @@ interface ToothSvgProps {
   size?: number
   isUpper?: boolean
   readOnly?: boolean
+  treatmentTypeCode?: string
 }
 
 function getSurfaceColor(condition: ToothCondition): string {
@@ -42,24 +43,28 @@ export function ToothSvg({
   size = 50,
   isUpper = true,
   readOnly = false,
+  treatmentTypeCode,
 }: ToothSvgProps) {
   const [hoveredSurface, setHoveredSurface] = useState<ToothSurface | null>(null)
   const isMissing = condition === 'missing'
+  const isImplantPlanned = condition === 'implant_planned'
+  const isDenturePlanned = condition === 'denture_planned'
+  const isSpecialMissing = isMissing || isImplantPlanned || isDenturePlanned
 
   const handleSurfaceClick = useCallback(
     (surface: ToothSurface) => {
-      if (readOnly || isMissing) return
+      if (readOnly || isSpecialMissing) return
       onSurfaceClick?.(surface)
     },
-    [readOnly, isMissing, onSurfaceClick]
+    [readOnly, isSpecialMissing, onSurfaceClick]
   )
 
   const handleMouseEnter = useCallback(
     (surface: ToothSurface) => {
-      if (readOnly || isMissing) return
+      if (readOnly || isSpecialMissing) return
       setHoveredSurface(surface)
     },
-    [readOnly, isMissing]
+    [readOnly, isSpecialMissing]
   )
 
   const handleMouseLeave = useCallback(() => {
@@ -117,6 +122,11 @@ export function ToothSvg({
     },
   ]
 
+  // Condition ring color for permanent border around tooth (not just on selection)
+  const conditionRingColor = condition !== 'healthy' ? CONDITION_COLORS[condition] : 'transparent'
+  const outerStroke = isSelected ? '#2563EB' : conditionRingColor
+  const outerStrokeWidth = isSelected ? 2.5 : condition !== 'healthy' ? 1.5 : 0
+
   return (
     <div className="flex flex-col items-center gap-0.5 select-none">
       {!isUpper && (
@@ -134,6 +144,7 @@ export function ToothSvg({
         className="shrink-0"
         style={{ cursor: readOnly ? 'default' : 'pointer' }}
       >
+        {/* Condition border ring */}
         <rect
           x={margin}
           y={margin}
@@ -142,8 +153,8 @@ export function ToothSvg({
           rx={size * 0.15}
           ry={size * 0.15}
           fill="none"
-          stroke={isSelected ? '#2563EB' : 'transparent'}
-          strokeWidth={isSelected ? 2.5 : 0}
+          stroke={outerStroke}
+          strokeWidth={outerStrokeWidth}
           className="transition-all duration-150"
         />
 
@@ -156,10 +167,10 @@ export function ToothSvg({
               <path
                 key={surface}
                 d={d}
-                fill={isMissing ? '#F3F4F6' : getSurfaceColor(cond)}
-                stroke={isMissing ? '#D1D5DB' : getSurfaceBorder(cond)}
+                fill={isSpecialMissing ? '#F3F4F6' : getSurfaceColor(cond)}
+                stroke={isSpecialMissing ? '#D1D5DB' : getSurfaceBorder(cond)}
                 strokeWidth={1}
-                opacity={isHovered && !isMissing ? 0.75 : 1}
+                opacity={isHovered && !isSpecialMissing ? 0.75 : 1}
                 className="transition-all duration-150"
                 onClick={() => handleSurfaceClick(surface)}
                 onMouseEnter={() => handleMouseEnter(surface)}
@@ -168,6 +179,7 @@ export function ToothSvg({
             )
           })}
 
+        {/* Missing: gray X */}
         {isMissing && (
           <>
             <line
@@ -189,6 +201,78 @@ export function ToothSvg({
               strokeLinecap="round"
             />
           </>
+        )}
+
+        {/* Implant planned: circle with cross (implant symbol) */}
+        {isImplantPlanned && (
+          <>
+            <circle
+              cx={center}
+              cy={center}
+              r={halfOuter * 0.55}
+              fill="none"
+              stroke={CONDITION_COLORS.implant_planned}
+              strokeWidth={1.5}
+            />
+            <line
+              x1={center}
+              y1={center - halfOuter * 0.55}
+              x2={center}
+              y2={center + halfOuter * 0.55}
+              stroke={CONDITION_COLORS.implant_planned}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+            <line
+              x1={center - halfOuter * 0.55}
+              y1={center}
+              x2={center + halfOuter * 0.55}
+              y2={center}
+              stroke={CONDITION_COLORS.implant_planned}
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+          </>
+        )}
+
+        {/* Denture planned: dashed border + D letter */}
+        {isDenturePlanned && (
+          <>
+            <rect
+              x={margin + 3}
+              y={margin + 3}
+              width={outer - 6}
+              height={outer - 6}
+              rx={size * 0.1}
+              fill="none"
+              stroke={CONDITION_COLORS.denture_planned}
+              strokeWidth={1.5}
+              strokeDasharray="3 2"
+            />
+            <text
+              x={center}
+              y={center + size * 0.12}
+              textAnchor="middle"
+              fontSize={size * 0.35}
+              fontWeight="bold"
+              fill={CONDITION_COLORS.denture_planned}
+            >
+              D
+            </text>
+          </>
+        )}
+
+        {/* Treatment type code badge (Cr, Br, Im, RC, Ve, De) */}
+        {treatmentTypeCode && !isSpecialMissing && (
+          <text
+            x={margin + 2}
+            y={margin + size * 0.28}
+            fontSize={size * 0.22}
+            fontWeight="bold"
+            fill="#374151"
+          >
+            {treatmentTypeCode}
+          </text>
         )}
       </svg>
       {isUpper && (
