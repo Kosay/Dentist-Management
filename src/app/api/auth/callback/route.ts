@@ -3,15 +3,26 @@ import { createClient } from '@/lib/supabase/server'
 
 function sanitizeNextPath(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return '/en/dashboard'
+    return null
   }
   return next
+}
+
+function defaultDashboardPath(next: string | null): string {
+  const sanitized = sanitizeNextPath(next)
+  if (sanitized) return sanitized
+  return '/en/dashboard'
+}
+
+function localeFromPath(path: string): 'en' | 'ar' {
+  const segment = path.split('/').filter(Boolean)[0]
+  return segment === 'ar' ? 'ar' : 'en'
 }
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = sanitizeNextPath(searchParams.get('next'))
+  const next = defaultDashboardPath(searchParams.get('next'))
 
   if (code) {
     const supabase = await createClient()
@@ -21,6 +32,6 @@ export async function GET(request: Request) {
     }
   }
 
-  const locale = next.split('/')[1] === 'ar' ? 'ar' : 'en'
+  const locale = localeFromPath(next)
   return NextResponse.redirect(`${origin}/${locale}/login?error=auth_callback_failed`)
 }
