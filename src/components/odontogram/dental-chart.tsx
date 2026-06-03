@@ -1,10 +1,16 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import type { ToothSurface } from '@/types/database'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDentalChart } from '@/hooks/use-dental-chart'
+import { useTreatmentPlans } from '@/hooks/use-treatments'
 import { LoadingSpinner } from '@/components/shared/loading-spinner'
+import {
+  getStructuralTreatmentCode,
+  isStructuralTreatmentType,
+} from '@/lib/treatment-types'
 import { getUpperArch, getLowerArch, type ToothData } from './tooth-data'
 import { OdontogramLegend } from './odontogram-legend'
 import { ToothDetailPanel } from './tooth-detail-panel'
@@ -24,12 +30,14 @@ function ToothRow({
   chart,
   readOnly,
   midIndex,
+  treatmentCodes,
 }: {
   teeth: ToothData[]
   isUpper: boolean
   chart: ReturnType<typeof useDentalChart>
   readOnly: boolean
   midIndex: number
+  treatmentCodes: Map<number, string>
 }) {
   return (
     <div className="overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
@@ -45,6 +53,7 @@ function ToothRow({
                   displayLabel={tooth.displayLabel}
                   surfaces={state.surfaces}
                   condition={state.condition}
+                  treatmentCode={treatmentCodes.get(tooth.number)}
                   isSelected={chart.selectedTooth === tooth.number}
                   isUpper={isUpper}
                   readOnly={readOnly}
@@ -80,6 +89,42 @@ export function DentalChart({
     readOnly,
     onToothClick,
   })
+
+  const { data: treatments = [] } = useTreatmentPlans(patientId)
+
+  const treatmentCodes = useMemo(() => {
+    const statusWeight: Record<string, number> = {
+      in_progress: 3,
+      planned: 2,
+      completed: 1,
+      cancelled: 0,
+    }
+    const map = new Map<number, string>()
+
+    for (const plan of treatments) {
+      if (!plan.tooth_number || plan.status === 'cancelled') continue
+      if (!isStructuralTreatmentType(plan.treatment_type)) continue
+      const code = getStructuralTreatmentCode(plan.treatment_type)
+      if (!code) continue
+
+      const existing = map.get(plan.tooth_number)
+      const existingPlan = treatments.find(
+        (item) =>
+          item.tooth_number === plan.tooth_number &&
+          getStructuralTreatmentCode(item.treatment_type) === existing
+      )
+      const currentWeight = statusWeight[plan.status] ?? 0
+      const existingWeight = existingPlan
+        ? statusWeight[existingPlan.status] ?? 0
+        : -1
+
+      if (!existing || currentWeight >= existingWeight) {
+        map.set(plan.tooth_number, code)
+      }
+    }
+
+    return map
+  }, [treatments])
 
   const upperTeeth = getUpperArch(initialIsPrimary)
   const lowerTeeth = getLowerArch(initialIsPrimary)
@@ -117,6 +162,7 @@ export function DentalChart({
             chart={chart}
             readOnly={readOnly}
             midIndex={midIndex}
+            treatmentCodes={treatmentCodes}
           />
 
           <div className="mx-auto h-px w-full bg-border" />
@@ -127,6 +173,7 @@ export function DentalChart({
             chart={chart}
             readOnly={readOnly}
             midIndex={midIndex}
+            treatmentCodes={treatmentCodes}
           />
 
           <div className="flex items-center justify-between px-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">

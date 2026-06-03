@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { syncTreatmentToOdontogram } from '@/lib/dental-chart-service'
 import { useAuth } from '@/providers/auth-provider'
 import type { Tables, InsertTables, UpdateTables } from '@/types/database'
 
@@ -49,8 +50,21 @@ export function useCreateTreatmentPlan() {
       if (error) throw error
       return data as unknown as TreatmentPlan
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['treatment_plans'] })
+      if (data.tooth_number) {
+        try {
+          await syncTreatmentToOdontogram(supabase, {
+            clinicId: data.clinic_id,
+            patientId: data.patient_id,
+            toothNumber: data.tooth_number,
+            status: data.status,
+          })
+          queryClient.invalidateQueries({ queryKey: ['dental_chart'] })
+        } catch {
+          // Best-effort odontogram sync — never block treatment creation
+        }
+      }
     },
   })
 }
@@ -76,11 +90,24 @@ export function useUpdateTreatmentPlan() {
       if (error) throw error
       return data as unknown as TreatmentPlan
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['treatment_plans'] })
       queryClient.invalidateQueries({
         queryKey: ['treatment_plan', variables.id],
       })
+      if (data.tooth_number) {
+        try {
+          await syncTreatmentToOdontogram(supabase, {
+            clinicId: data.clinic_id,
+            patientId: data.patient_id,
+            toothNumber: data.tooth_number,
+            status: data.status,
+          })
+          queryClient.invalidateQueries({ queryKey: ['dental_chart'] })
+        } catch {
+          // Best-effort odontogram sync
+        }
+      }
     },
   })
 }

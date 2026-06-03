@@ -51,3 +51,29 @@ export function getTreatmentTypeLabel(
   }
   return value
 }
+
+/** Two-letter codes shown on odontogram for structural/prosthetic treatments */
+export const STRUCTURAL_TREATMENT_CODES: Partial<
+  Record<TreatmentTypeSlug, string>
+> = {
+  crown: 'Cr',
+  bridge: 'Br',
+  implant: 'Im',
+  root_canal: 'RC',
+  veneer: 'Ve',
+  denture: 'De',
+}
+
+export function getStructuralTreatmentCode(
+  treatmentType: string
+): string | undefined {
+  const slug = normalizeTreatmentType(treatmentType)
+  if (isTreatmentTypeSlug(slug)) {
+    return STRUCTURAL_TREATMENT_CODES[slug]
+  }
+  return undefined
+}
+
+export function isStructuralTreatmentType(treatmentType: string): boolean {
+  return getStructuralTreatmentCode(treatmentType) !== undefined
+}

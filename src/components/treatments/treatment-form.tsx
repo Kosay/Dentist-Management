@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { FdiToothSelect } from '@/components/odontogram/fdi-tooth-select'
 import { useAuth } from '@/providers/auth-provider'
 import {
   useCreateTreatmentPlan,
@@ -70,6 +71,7 @@ interface TreatmentFormProps {
   onOpenChange: (open: boolean) => void
   patientId: string
   treatment?: Tables<'treatment_plans'>
+  defaultToothNumber?: number
 }
 
 export function TreatmentForm({
@@ -77,6 +79,7 @@ export function TreatmentForm({
   onOpenChange,
   patientId,
   treatment,
+  defaultToothNumber,
 }: TreatmentFormProps) {
   const t = useTranslations('treatments')
   const tOdontogram = useTranslations('odontogram')
@@ -118,7 +121,7 @@ export function TreatmentForm({
       })
     } else {
       form.reset({
-        tooth_number: undefined,
+        tooth_number: defaultToothNumber,
         surfaces: [],
         diagnosis: '',
         treatment_type: '',
@@ -130,7 +133,7 @@ export function TreatmentForm({
         notes: '',
       })
     }
-  }, [treatment, form])
+  }, [treatment, form, defaultToothNumber])
 
   const watchedCost = form.watch('cost')
   const watchedDiscount = form.watch('discount')
@@ -194,25 +197,11 @@ export function TreatmentForm({
                   control={form.control}
                   name="tooth_number"
                   render={({ field }) => (
-                    <Select
-                      value={field.value?.toString() ?? ''}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('tooth')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 32 }, (_, i) => i + 1).map(
-                          (n) => (
-                            <SelectItem key={n} value={n.toString()}>
-                              {n}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <FdiToothSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={t('tooth')}
+                    />
                   )}
                 />
               </div>

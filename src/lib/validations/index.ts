@@ -131,7 +131,7 @@ export const treatmentPlanStatusEnum = z.enum([
 export const treatmentPlanSchema = z.object({
   patient_id: z.uuid(),
   dentist_id: z.uuid(),
-  tooth_number: z.number().int().min(1).max(32).optional(),
+  tooth_number: z.number().int().min(11).max(85).optional(),
   surface: toothSurfaceEnum.optional(),
   diagnosis: z.string().optional(),
   treatment_type: z.string().min(1, { error: "Treatment type is required" }),
