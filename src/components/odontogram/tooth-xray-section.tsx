@@ -39,6 +39,9 @@ export function ToothXraySection({
     [allImages, toothNumber]
   )
 
+  const hasOtherXrays =
+    !isLoading && allImages.length > 0 && toothImages.length === 0
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -115,6 +118,11 @@ export function ToothXraySection({
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/20 px-3 py-6 text-center">
           <ImageIcon className="size-8 text-muted-foreground/40" />
           <p className="text-xs text-muted-foreground">{t('no_xray_images')}</p>
+          {hasOtherXrays && (
+            <p className="text-[11px] text-muted-foreground/80">
+              {t('xray_other_teeth_hint')}
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
@@ -132,6 +140,7 @@ export function ToothXraySection({
                 src={image.file_url}
                 alt={image.description || image.file_name}
                 className="size-full object-cover transition-transform group-hover:scale-105"
+                loading="lazy"
               />
               <span className="absolute inset-x-0 bottom-0 bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
                 {new Date(image.created_at).toLocaleDateString()}
