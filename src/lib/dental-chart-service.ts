@@ -31,12 +31,16 @@ export async function syncTreatmentToOdontogram({
   const condition = treatmentStatusToCondition(treatmentStatus)
 
   // Find or create dental chart
-  let { data: chart } = await supabase
-    .from('dental_charts')
-    .select('id')
-    .eq('patient_id', patientId)
-    .eq('is_primary', isPrimary)
-    .maybeSingle()
+  let chart: { id: string } | null = null
+  {
+    const { data } = await supabase
+      .from('dental_charts')
+      .select('id')
+      .eq('patient_id', patientId)
+      .eq('is_primary', isPrimary)
+      .maybeSingle()
+    chart = data as { id: string } | null
+  }
 
   if (!chart) {
     const { data: newChart, error } = await supabase
