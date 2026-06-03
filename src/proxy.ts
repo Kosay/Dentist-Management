@@ -23,7 +23,7 @@ function mergeCookies(from: NextResponse, into: NextResponse) {
   })
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { response: supabaseResponse, user } = await updateSession(request)
   const intlResponse = intlMiddleware(request)
 

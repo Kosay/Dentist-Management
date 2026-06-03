@@ -53,12 +53,16 @@ export async function syncTreatmentToOdontogram({
   }
 
   // Get existing tooth record
-  const { data: existing } = await supabase
-    .from('tooth_records')
-    .select('id, condition')
-    .eq('chart_id', chart.id)
-    .eq('tooth_number', toothNumber)
-    .maybeSingle()
+  let existing: { id: string; condition: string } | null = null
+  {
+    const { data } = await supabase
+      .from('tooth_records')
+      .select('id, condition')
+      .eq('chart_id', chart.id)
+      .eq('tooth_number', toothNumber)
+      .maybeSingle()
+    existing = data as { id: string; condition: string } | null
+  }
 
   if (existing) {
     // Only update condition if the new one is more actionable
