@@ -319,6 +319,7 @@
     "xray_size_limit": "يجب أن يكون حجم الصورة أقل من 5 ميجابايت",
     "xray_invalid_type": "يرجى رفع ملف صورة",
     "xray_for_tooth": "أشعة للسن",
+    "xray_other_teeth_hint": "يوجد للمريض أشعة لأسنان أخرى — افتح تبويب الصور أو اختر رقم السن FDI الصحيح عند الرفع.",
     "tooth_names": {
       "central_incisor": "القاطع المركزي",
       "lateral_incisor": "القاطع الجانبي",

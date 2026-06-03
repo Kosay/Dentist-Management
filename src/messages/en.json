@@ -313,6 +313,7 @@
     "xray_size_limit": "Image must be smaller than 5 MB",
     "xray_invalid_type": "Please upload an image file",
     "xray_for_tooth": "X-ray for tooth",
+    "xray_other_teeth_hint": "This patient has X-rays on other teeth — open the Images tab or select the matching FDI tooth number when uploading.",
     "tooth_names": {
       "central_incisor": "Central Incisor",
       "lateral_incisor": "Lateral Incisor",
