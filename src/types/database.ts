@@ -37,6 +37,8 @@ export type ToothCondition =
   | 'completed'
   | 'diseased'
   | 'missing'
+  | 'implant_planned'
+  | 'denture_planned'
 
 export type GenderType = 'male' | 'female' | 'other'
 

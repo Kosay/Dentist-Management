@@ -1,7 +1,6 @@
 "use client";
 
 import { AuthLanguageSwitcher } from "@/components/auth/auth-shell";
-import AuthProvider from "@/providers/auth-provider";
 
 export default function AuthLayout({
   children,
@@ -16,9 +15,7 @@ export default function AuthLayout({
         <AuthLanguageSwitcher />
       </div>
 
-      <div className="relative z-10 w-full max-w-md">
-        <AuthProvider>{children}</AuthProvider>
-      </div>
+      <div className="relative z-10 w-full max-w-md">{children}</div>
     </div>
   );
 }

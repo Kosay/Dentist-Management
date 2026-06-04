@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useUploadImage } from '@/hooks/use-images'
+import { FdiToothSelect } from '@/components/odontogram/fdi-tooth-select'
 import { useVisits } from '@/hooks/use-visits'
 import { useTreatmentPlans } from '@/hooks/use-treatments'
 import { getTreatmentTypeLabel } from '@/lib/treatment-types'
@@ -316,25 +317,11 @@ export function ImageUpload({
                   control={form.control}
                   name="tooth_number"
                   render={({ field }) => (
-                    <Select
-                      value={field.value?.toString() ?? ''}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="—" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 32 }, (_, i) => i + 1).map(
-                          (n) => (
-                            <SelectItem key={n} value={n.toString()}>
-                              {n}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <FdiToothSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="—"
+                    />
                   )}
                 />
               </div>
