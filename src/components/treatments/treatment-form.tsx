@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { FdiToothSelect } from '@/components/odontogram/fdi-tooth-select'
 import { useAuth } from '@/providers/auth-provider'
 import {
   useCreateTreatmentPlan,
@@ -93,6 +94,7 @@ interface TreatmentFormProps {
   patientId: string
   initialToothNumber?: number
   treatment?: Tables<'treatment_plans'>
+  defaultToothNumber?: number
 }
 
 export function TreatmentForm({
@@ -101,6 +103,7 @@ export function TreatmentForm({
   patientId,
   initialToothNumber,
   treatment,
+  defaultToothNumber,
 }: TreatmentFormProps) {
   const t = useTranslations('treatments')
   const tOdontogram = useTranslations('odontogram')
@@ -142,7 +145,7 @@ export function TreatmentForm({
       })
     } else {
       form.reset({
-        tooth_number: initialToothNumber,
+        tooth_number: defaultToothNumber,
         surfaces: [],
         diagnosis: '',
         treatment_type: '',
@@ -154,7 +157,7 @@ export function TreatmentForm({
         notes: '',
       })
     }
-  }, [treatment, initialToothNumber, form])
+  }, [treatment, form, defaultToothNumber])
 
   const watchedCost = form.watch('cost')
   const watchedDiscount = form.watch('discount')
@@ -218,55 +221,11 @@ export function TreatmentForm({
                   control={form.control}
                   name="tooth_number"
                   render={({ field }) => (
-                    <Select
-                      value={field.value?.toString() ?? ''}
-                      onValueChange={(val) =>
-                        field.onChange(val ? Number(val) : undefined)
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('select_tooth')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* Permanent teeth grouped by quadrant */}
-                        {([1, 2, 3, 4] as const).map((q) => {
-                          const teeth = getTeethByQuadrant(PERMANENT_TEETH, q)
-                          const label = PERMANENT_QUADRANT_LABELS[q]
-                          return (
-                            <SelectGroup key={q}>
-                              <SelectLabel>{label}</SelectLabel>
-                              {teeth.map((tooth) => (
-                                <SelectItem
-                                  key={tooth.number}
-                                  value={tooth.number.toString()}
-                                >
-                                  {tooth.displayLabel} — {tOdontogram(`tooth_names.${tooth.nameKey}`)} ({tooth.number})
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          )
-                        })}
-                        <SelectSeparator />
-                        {/* Primary teeth grouped by quadrant */}
-                        {([5, 6, 7, 8] as const).map((q) => {
-                          const teeth = getTeethByQuadrant(PRIMARY_TEETH, q)
-                          const label = PRIMARY_QUADRANT_LABELS[q]
-                          return (
-                            <SelectGroup key={q}>
-                              <SelectLabel>{label}</SelectLabel>
-                              {teeth.map((tooth) => (
-                                <SelectItem
-                                  key={tooth.number}
-                                  value={tooth.number.toString()}
-                                >
-                                  {tooth.displayLabel} — {tOdontogram(`tooth_names.${tooth.nameKey}`)} ({tooth.number})
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          )
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <FdiToothSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={t('tooth')}
+                    />
                   )}
                 />
               </div>

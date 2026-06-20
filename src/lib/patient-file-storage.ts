@@ -87,35 +87,91 @@ export function normalizePatientFileStoragePath(fileUrlOrPath: string): string {
   return fileUrlOrPath.replace(/^patient-files\//, '')
 }
 
+export function isResolvableImageUrl(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')
+}
+
+export async function resolvePatientFileUrlsViaApi(
+  paths: string[]
+): Promise<Map<string, string>> {
+  const uniquePaths = [...new Set(paths.filter(Boolean))]
+  if (uniquePaths.length === 0) {
+    return new Map()
+  }
+
+  const response = await fetch('/api/patient-files/signed-urls', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paths: uniquePaths }),
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    throw new Error(payload?.error ?? 'Failed to resolve image URLs')
+  }
+
+  const payload = (await response.json()) as { urls?: Record<string, string> }
+  return new Map(Object.entries(payload.urls ?? {}))
+}
+
 export async function resolvePatientFileUrl(
   supabase: SupabaseClient,
   fileUrlOrPath: string
 ): Promise<string> {
-  // R2-stored files use a plain storage path (no https:// prefix and no Supabase URL patterns)
-  const isSupabaseUrl =
-    fileUrlOrPath.startsWith('http://') || fileUrlOrPath.startsWith('https://')
-  const isR2Key = !isSupabaseUrl
-
-  if (isR2Key) {
-    return resolveR2FileUrl(fileUrlOrPath)
+  if (isResolvableImageUrl(fileUrlOrPath)) {
+    return fileUrlOrPath
   }
 
-  // Supabase Storage: generate a signed URL
-  if (isSupabaseUrl) {
-    const extracted = extractStoragePathFromPublicUrl(fileUrlOrPath)
-    if (!extracted) return fileUrlOrPath
-    fileUrlOrPath = extracted.replace(/^patient-files\//, '')
-  } else {
-    fileUrlOrPath = fileUrlOrPath.replace(/^patient-files\//, '')
-  }
+  const path = normalizePatientFileStoragePath(fileUrlOrPath)
 
   const { data, error } = await supabase.storage
     .from(PATIENT_FILES_BUCKET)
-    .createSignedUrl(fileUrlOrPath, 60 * 60 * 24)
+    .createSignedUrl(path, 60 * 60 * 24)
 
-  if (error || !data?.signedUrl) {
-    throw error ?? new Error('Unable to resolve patient file URL')
+  if (!error && data?.signedUrl) {
+    return data.signedUrl
   }
 
-  return data.signedUrl
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from(PATIENT_FILES_BUCKET)
+    .download(path)
+
+  if (!downloadError && blob) {
+    return URL.createObjectURL(blob)
+  }
+
+  throw error ?? downloadError ?? new Error('Unable to resolve patient file URL')
+}
+
+export async function resolvePatientFileUrls(
+  supabase: SupabaseClient,
+  paths: string[]
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>()
+
+  try {
+    const fromApi = await resolvePatientFileUrlsViaApi(paths)
+    for (const [path, url] of fromApi.entries()) {
+      result.set(path, url)
+    }
+  } catch {
+    // Fall back to per-file client resolution below.
+  }
+
+  const unresolved = paths.filter((path) => !result.has(path))
+
+  await Promise.all(
+    unresolved.map(async (path) => {
+      try {
+        const url = await resolvePatientFileUrl(supabase, path)
+        result.set(path, url)
+      } catch {
+        // Leave unresolved — caller should skip broken entries.
+      }
+    })
+  )
+
+  return result
 }

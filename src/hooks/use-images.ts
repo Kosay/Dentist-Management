@@ -5,9 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/providers/auth-provider'
 import {
   buildPatientFileStoragePath,
+  isResolvableImageUrl,
   PATIENT_FILES_BUCKET,
-  resolvePatientFileUrl,
-  uploadToR2,
+  resolvePatientFileUrls,
 } from '@/lib/patient-file-storage'
 import { getMaxImageSizeBytes } from '@/lib/image-upload-limits'
 import type { Tables, InsertTables, ImageCategory } from '@/types/database'
@@ -37,18 +37,20 @@ export function usePatientImages(patientId: string, category?: ImageCategory) {
       if (error) throw error
 
       const images = (data ?? []) as unknown as PatientImage[]
-      const resolved = await Promise.all(
-        images.map(async (image) => {
-          try {
-            const signedUrl = await resolvePatientFileUrl(supabase, image.file_url)
-            return { ...image, file_url: signedUrl }
-          } catch {
-            return image
-          }
-        })
+      const urlMap = await resolvePatientFileUrls(
+        supabase,
+        images.map((image) => image.file_url)
       )
 
-      return resolved
+      return images
+        .map((image) => {
+          const signedUrl = urlMap.get(image.file_url)
+          if (!signedUrl || !isResolvableImageUrl(signedUrl)) {
+            return null
+          }
+          return { ...image, file_url: signedUrl }
+        })
+        .filter((image): image is PatientImage => image !== null)
     },
     enabled: !!clinic?.id && !!patientId,
   })

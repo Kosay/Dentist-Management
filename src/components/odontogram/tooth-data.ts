@@ -97,7 +97,7 @@ export const CONDITION_COLORS: Record<ToothCondition, string> = {
   completed: '#22C55E',
   diseased: '#EF4444',
   missing: '#9CA3AF',
-  implant_planned: '#8B5CF6',
+  implant_planned: '#9333EA',
   denture_planned: '#F97316',
 }
 
@@ -111,6 +111,19 @@ export const CONDITIONS: ToothCondition[] = [
   'implant_planned',
   'denture_planned',
 ]
+
+export function getConditionRingColor(condition: ToothCondition): string | null {
+  if (condition === 'healthy') return null
+  return CONDITION_COLORS[condition]
+}
+
+export function isMissingLikeCondition(condition: ToothCondition): boolean {
+  return (
+    condition === 'missing' ||
+    condition === 'implant_planned' ||
+    condition === 'denture_planned'
+  )
+}
 
 export function getTeethByQuadrant(teeth: ToothData[], quadrant: number): ToothData[] {
   return teeth.filter((t) => t.quadrant === quadrant)

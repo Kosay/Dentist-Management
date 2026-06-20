@@ -1,116 +1,170 @@
-import { createClient } from '@/lib/supabase/client'
-import type { ToothCondition, TreatmentStatus } from '@/types/database'
-import { PERMANENT_TEETH, PRIMARY_TEETH, getDisplayQuadrantLabel } from '@/components/odontogram/tooth-data'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type {
+  InsertTables,
+  ToothCondition,
+  TreatmentStatus,
+} from '@/types/database'
+import {
+  getDisplayQuadrantLabel,
+  PRIMARY_TEETH,
+  PERMANENT_TEETH,
+  type ToothData,
+} from '@/components/odontogram/tooth-data'
+import {
+  findToothData,
+  isPrimaryToothNumber,
+  mapTreatmentStatusToCondition,
+} from '@/lib/odontogram-utils'
 
-function treatmentStatusToCondition(status: TreatmentStatus): ToothCondition {
-  switch (status) {
-    case 'planned': return 'planned'
-    case 'in_progress': return 'in_progress'
-    case 'completed': return 'completed'
-    case 'cancelled': return 'healthy'
-  }
-}
+type ToothRecordInsert = InsertTables<'tooth_records'>
+type SurfaceRecordInsert = InsertTables<'surface_records'>
 
-export async function syncTreatmentToOdontogram({
-  clinicId,
-  patientId,
-  toothNumber,
-  treatmentStatus,
-}: {
+interface SyncTreatmentParams {
   clinicId: string
   patientId: string
   toothNumber: number
-  treatmentStatus: TreatmentStatus
-}) {
-  const supabase = createClient()
-  const isPrimary = toothNumber >= 51
-  const allTeeth = isPrimary ? PRIMARY_TEETH : PERMANENT_TEETH
-  const tooth = allTeeth.find((t) => t.number === toothNumber)
+  status: TreatmentStatus
+}
+
+function getDefaultSurfaces(tooth: ToothData) {
+  return tooth.surfaces.map((surface) => ({
+    surface,
+    condition: 'healthy' as ToothCondition,
+  }))
+}
+
+async function getOrCreateChart(
+  supabase: SupabaseClient,
+  clinicId: string,
+  patientId: string,
+  isPrimary: boolean
+) {
+  const { data: existing, error: lookupError } = await supabase
+    .from('dental_charts')
+    .select('id')
+    .eq('patient_id', patientId)
+    .eq('is_primary', isPrimary)
+    .maybeSingle()
+
+  if (lookupError) throw lookupError
+  if (existing) return existing
+
+  const { data, error } = await supabase
+    .from('dental_charts')
+    .insert({
+      clinic_id: clinicId,
+      patient_id: patientId,
+      is_primary: isPrimary,
+    } as never)
+    .select('id')
+    .single()
+
+  if (error) throw error
+  return data as { id: string }
+}
+
+async function ensureSurfaceRecords(
+  supabase: SupabaseClient,
+  clinicId: string,
+  toothRecordId: string,
+  tooth: ToothData,
+  condition: ToothCondition
+) {
+  const { data: existing, error: lookupError } = await supabase
+    .from('surface_records')
+    .select('surface')
+    .eq('tooth_record_id', toothRecordId)
+
+  if (lookupError) throw lookupError
+
+  const existingSurfaces = new Set((existing ?? []).map((row) => row.surface))
+  const missing = tooth.surfaces.filter((surface) => !existingSurfaces.has(surface))
+
+  if (missing.length === 0) return
+
+  const inserts: SurfaceRecordInsert[] = missing.map((surface) => ({
+    tooth_record_id: toothRecordId,
+    clinic_id: clinicId,
+    surface,
+    condition,
+  }))
+
+  const { error } = await supabase.from('surface_records').insert(inserts as never)
+  if (error) throw error
+}
+
+/**
+ * Best-effort sync from a treatment plan to the odontogram.
+ * Failures are silent — treatment save is never blocked.
+ */
+export async function syncTreatmentToOdontogram(
+  supabase: SupabaseClient,
+  { clinicId, patientId, toothNumber, status }: SyncTreatmentParams
+): Promise<void> {
+  if (!toothNumber) return
+
+  const tooth = findToothData(toothNumber)
   if (!tooth) return
 
-  const condition = treatmentStatusToCondition(treatmentStatus)
+  const isPrimary = isPrimaryToothNumber(toothNumber)
+  const condition = mapTreatmentStatusToCondition(status)
+  const chart = await getOrCreateChart(supabase, clinicId, patientId, isPrimary)
 
-  // Find or create dental chart
-  let chart: { id: string } | null = null
-  {
-    const { data } = await supabase
-      .from('dental_charts')
-      .select('id')
-      .eq('patient_id', patientId)
-      .eq('is_primary', isPrimary)
-      .maybeSingle()
-    chart = data as { id: string } | null
-  }
+  const { data: existingRecord, error: recordLookupError } = await supabase
+    .from('tooth_records')
+    .select('id, condition')
+    .eq('chart_id', chart.id)
+    .eq('tooth_number', toothNumber)
+    .maybeSingle()
 
-  if (!chart) {
-    const { data: newChart, error } = await supabase
-      .from('dental_charts')
-      .insert({ clinic_id: clinicId, patient_id: patientId, is_primary: isPrimary } as never)
-      .select('id')
-      .single()
-    if (error || !newChart) return
-    chart = newChart as { id: string }
-  }
+  if (recordLookupError) throw recordLookupError
 
-  // Get existing tooth record
-  let existing: { id: string; condition: string } | null = null
-  {
-    const { data } = await supabase
+  if (existingRecord) {
+    const { error: updateError } = await supabase
       .from('tooth_records')
-      .select('id, condition')
-      .eq('chart_id', chart.id)
-      .eq('tooth_number', toothNumber)
-      .maybeSingle()
-    existing = data as { id: string; condition: string } | null
+      .update({ condition, updated_at: new Date().toISOString() } as never)
+      .eq('id', existingRecord.id)
+
+    if (updateError) throw updateError
+    await ensureSurfaceRecords(supabase, clinicId, existingRecord.id, tooth, condition)
+    return
   }
 
-  if (existing) {
-    // Only update condition if the new one is more actionable
-    const priority: Record<ToothCondition, number> = {
-      healthy: 0, planned: 1, in_progress: 2, completed: 3,
-      diseased: 4, missing: 5, implant_planned: 6, denture_planned: 6,
-    }
-    const currentPriority = priority[existing.condition as ToothCondition] ?? 0
-    const newPriority = priority[condition] ?? 0
-    // Always update so dentist's explicit choice is reflected
-    if (currentPriority !== newPriority || existing.condition !== condition) {
-      await supabase
-        .from('tooth_records')
-        .update({ condition, updated_at: new Date().toISOString() } as never)
-        .eq('id', existing.id)
-    }
-  } else {
-    // Create tooth record with condition
-    const quadrantLabel = getDisplayQuadrantLabel(tooth.quadrant, isPrimary)
-    const { data: toothRecord, error: toothError } = await supabase
-      .from('tooth_records')
-      .insert({
-        chart_id: chart.id,
-        clinic_id: clinicId,
-        tooth_number: toothNumber,
-        tooth_name: tooth.nameKey,
-        quadrant: quadrantLabel,
-        position: tooth.position,
-        condition,
-      } as never)
-      .select('id')
-      .single()
+  const toothInsert: ToothRecordInsert = {
+    chart_id: chart.id,
+    clinic_id: clinicId,
+    tooth_number: tooth.number,
+    tooth_name: tooth.nameKey,
+    quadrant: getDisplayQuadrantLabel(tooth.quadrant, isPrimary),
+    position: tooth.position,
+    condition,
+    notes: null,
+  }
 
-    if (toothError || !toothRecord) return
+  const { data: created, error: insertError } = await supabase
+    .from('tooth_records')
+    .insert(toothInsert as never)
+    .select('id')
+    .single()
 
-    // Create surface records for the tooth
-    const record = toothRecord as { id: string }
-    const surfaceInserts = tooth.surfaces.map((surface) => ({
-      tooth_record_id: record.id,
+  if (insertError) throw insertError
+
+  const surfaceInserts: SurfaceRecordInsert[] = getDefaultSurfaces(tooth).map(
+    (surfaceState) => ({
+      tooth_record_id: created.id,
       clinic_id: clinicId,
-      surface,
-      condition: 'healthy' as const,
-    }))
+      surface: surfaceState.surface,
+      condition: surfaceState.condition,
+    })
+  )
 
-    if (surfaceInserts.length > 0) {
-      await supabase
-        .from('surface_records')
-        .insert(surfaceInserts as never)
-    }
-  }
+  const { error: surfaceError } = await supabase
+    .from('surface_records')
+    .insert(surfaceInserts as never)
+
+  if (surfaceError) throw surfaceError
+}
+
+export function getAllToothNumbers(): number[] {
+  return [...PERMANENT_TEETH, ...PRIMARY_TEETH].map((tooth) => tooth.number)
 }

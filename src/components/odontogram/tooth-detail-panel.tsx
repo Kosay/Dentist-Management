@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus } from 'lucide-react'
 import type { ToothCondition, ToothSurface } from '@/types/database'
@@ -16,7 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { CONDITION_COLORS, CONDITIONS, getDisplayQuadrantLabel, type ToothData } from './tooth-data'
+import { TreatmentForm } from '@/components/treatments/treatment-form'
+import { useTreatmentPlans } from '@/hooks/use-treatments'
+import { getTreatmentTypeLabel } from '@/lib/treatment-types'
+import {
+  CONDITION_COLORS,
+  CONDITIONS,
+  getDisplayQuadrantLabel,
+  isMissingLikeCondition,
+  type ToothData,
+} from './tooth-data'
 import type { ToothState } from '@/hooks/use-dental-chart'
 import { ToothXraySection } from './tooth-xray-section'
 import { TreatmentForm } from '@/components/treatments/treatment-form'
@@ -48,10 +57,7 @@ function ConditionBadge({ condition }: { condition: ToothCondition }) {
   const isLight = condition === 'healthy'
 
   return (
-    <Badge
-      variant="outline"
-      className="gap-1.5 border-border"
-    >
+    <Badge variant="outline" className="gap-1.5 border-border">
       <span
         className="size-2 rounded-full ring-1 ring-foreground/10"
         style={{ backgroundColor: color }}
@@ -76,10 +82,28 @@ export function ToothDetailPanel({
   onClose,
 }: ToothDetailPanelProps) {
   const t = useTranslations('odontogram')
-  const tT = useTranslations('treatments')
+  const tt = useTranslations('treatments')
   const tc = useTranslations('common')
+  const [treatmentFormOpen, setTreatmentFormOpen] = useState(false)
+
+  const { data: allTreatments = [] } = useTreatmentPlans(patientId)
+
+  const toothTreatments = useMemo(
+    () =>
+      allTreatments.filter(
+        (plan) =>
+          plan.tooth_number === tooth.number && plan.status !== 'cancelled'
+      ),
+    [allTreatments, tooth.number]
+  )
+
   const toothName = t(`tooth_names.${tooth.nameKey}`)
   const quadrantLabel = getDisplayQuadrantLabel(tooth.quadrant, isPrimary)
+  const isMissingLike = isMissingLikeCondition(toothState.condition)
+  const showReplacementActions =
+    toothState.condition === 'missing' ||
+    toothState.condition === 'implant_planned' ||
+    toothState.condition === 'denture_planned'
 
   const [addTreatmentOpen, setAddTreatmentOpen] = useState(false)
 
@@ -98,20 +122,66 @@ export function ToothDetailPanel({
                 <span>{toothName}</span>
               </CardTitle>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{t('quadrant')} {quadrantLabel}</span>
+                <span>
+                  {t('quadrant')} {quadrantLabel}
+                </span>
+                <span>&middot;</span>
+                <span>FDI {tooth.number}</span>
                 <span>&middot;</span>
                 <ConditionBadge condition={toothState.condition} />
               </div>
             </div>
             <Button variant="ghost" size="icon-sm" onClick={onClose}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M11 3L3 11M3 3l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <path
+                  d="M11 3L3 11M3 3l8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-5 pt-4">
-          {/* Overall condition */}
+          {showReplacementActions && !readOnly && (
+            <div className="space-y-2">
+              <Label>{t('replacement_planning')}</Label>
+              <div className="flex flex-wrap gap-2">
+                {toothState.condition !== 'implant_planned' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onConditionChange('implant_planned')}
+                  >
+                    {t('conditions.implant_planned')}
+                  </Button>
+                )}
+                {toothState.condition !== 'denture_planned' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onConditionChange('denture_planned')}
+                  >
+                    {t('conditions.denture_planned')}
+                  </Button>
+                )}
+                {toothState.condition !== 'missing' && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onConditionChange('missing')}
+                  >
+                    {t('mark_as_missing')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>{t('select_condition')}</Label>
             <Select
@@ -138,47 +208,7 @@ export function ToothDetailPanel({
             </Select>
           </div>
 
-          {/* Implant / Denture quick buttons for missing teeth */}
-          {isMissing && !readOnly && (
-            <div className="space-y-2">
-              <Label>{t('prosthetic_plan')}</Label>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 border-violet-300 text-violet-700 hover:bg-violet-50"
-                  onClick={() => onConditionChange('implant_planned')}
-                >
-                  {t('conditions.implant_planned')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-50"
-                  onClick={() => onConditionChange('denture_planned')}
-                >
-                  {t('conditions.denture_planned')}
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Revert to missing if implant/denture planned */}
-          {(toothState.condition === 'implant_planned' || toothState.condition === 'denture_planned') && !readOnly && (
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground"
-                onClick={() => onConditionChange('missing')}
-              >
-                {t('mark_as_missing')}
-              </Button>
-            </div>
-          )}
-
-          {/* Per-surface conditions */}
-          {!isMissing && toothState.condition !== 'implant_planned' && toothState.condition !== 'denture_planned' && (
+          {!isMissingLike && (
             <div className="space-y-2">
               <Label>{t('select_surface')}</Label>
               <div className="space-y-2">
@@ -201,7 +231,7 @@ export function ToothDetailPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {CONDITIONS.filter(c => !['implant_planned', 'denture_planned'].includes(c)).map((c) => (
+                        {CONDITIONS.map((c) => (
                           <SelectItem key={c} value={c}>
                             <span className="flex items-center gap-2">
                               <span
@@ -220,47 +250,41 @@ export function ToothDetailPanel({
             </div>
           )}
 
-          {/* Treatment plans for this tooth */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>{t('treatments_for_tooth')}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label>{t('tooth_treatments')}</Label>
               {!readOnly && (
                 <Button
-                  variant="ghost"
+                  type="button"
+                  variant="outline"
                   size="sm"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() => setAddTreatmentOpen(true)}
+                  className="gap-1.5"
+                  onClick={() => setTreatmentFormOpen(true)}
                 >
-                  <Plus className="size-3" />
+                  <Plus className="size-3.5" />
                   {t('add_treatment')}
                 </Button>
               )}
             </div>
             {toothTreatments.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
-                {t('no_records')}
+              <div className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
+                {t('no_tooth_treatments')}
               </div>
             ) : (
-              <div className="space-y-1.5">
-                {toothTreatments.map((tp) => (
+              <div className="space-y-2">
+                {toothTreatments.map((plan) => (
                   <div
-                    key={tp.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-2"
+                    key={plan.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium">
-                        {tT(`types.${tp.treatment_type}` as 'types.filling')}
-                      </p>
-                      {tp.surface && (
-                        <p className="text-[10px] text-muted-foreground">
-                          {tp.surface}
-                        </p>
+                    <span className="text-sm font-medium">
+                      {getTreatmentTypeLabel(
+                        (key) => tt(key),
+                        plan.treatment_type
                       )}
-                    </div>
-                    <Badge
-                      className={`shrink-0 border-0 text-[10px] ${STATUS_COLORS[tp.status]}`}
-                    >
-                      {tT(tp.status)}
+                    </span>
+                    <Badge variant="secondary" className="text-xs capitalize">
+                      {tt(plan.status)}
                     </Badge>
                   </div>
                 ))}
@@ -268,7 +292,6 @@ export function ToothDetailPanel({
             )}
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
             <Label>{tc('labels.notes')}</Label>
             <Textarea
@@ -285,20 +308,14 @@ export function ToothDetailPanel({
             toothNumber={tooth.number}
             readOnly={readOnly}
           />
-
-          {!readOnly && (
-            <Button className="w-full" onClick={onClose}>
-              {tc('buttons.save')}
-            </Button>
-          )}
         </CardContent>
       </Card>
 
       <TreatmentForm
-        open={addTreatmentOpen}
-        onOpenChange={setAddTreatmentOpen}
+        open={treatmentFormOpen}
+        onOpenChange={setTreatmentFormOpen}
         patientId={patientId}
-        initialToothNumber={tooth.number}
+        defaultToothNumber={tooth.number}
       />
     </>
   )
