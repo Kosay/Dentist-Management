@@ -8,6 +8,7 @@ import {
   isResolvableImageUrl,
   PATIENT_FILES_BUCKET,
   resolvePatientFileUrls,
+  normalizePatientFileStoragePath,
 } from '@/lib/patient-file-storage'
 import { getMaxImageSizeBytes } from '@/lib/image-upload-limits'
 import type { Tables, InsertTables, ImageCategory } from '@/types/database'
@@ -159,12 +160,21 @@ export function useDeleteImage() {
 
   return useMutation<void, Error, PatientImage>({
     mutationFn: async (image) => {
-      const { error } = await supabase
+      // Delete the file from storage first
+      const storagePath = normalizePatientFileStoragePath(image.file_url)
+      const { error: storageError } = await supabase.storage
+        .from(PATIENT_FILES_BUCKET)
+        .remove([storagePath])
+
+      if (storageError) throw storageError
+
+      // Then mark the database record as deleted
+      const { error: dbError } = await supabase
         .from('patient_images')
         .update({ deleted_at: new Date().toISOString() } as never)
         .eq('id', image.id)
 
-      if (error) throw error
+      if (dbError) throw dbError
     },
     onSuccess: (_, image) => {
       queryClient.invalidateQueries({
