@@ -20,6 +20,7 @@ interface ToothSvgProps {
   size?: number
   isUpper?: boolean
   readOnly?: boolean
+  treatmentTypeCode?: string
 }
 
 function getSurfaceColor(condition: ToothCondition): string {
@@ -51,6 +52,7 @@ export function ToothSvg({
   size = 50,
   isUpper = true,
   readOnly = false,
+  treatmentTypeCode,
 }: ToothSvgProps) {
   const [hoveredSurface, setHoveredSurface] = useState<ToothSurface | null>(null)
   const isMissingLike = isMissingLikeCondition(condition)
@@ -151,6 +153,7 @@ export function ToothSvg({
         className="shrink-0"
         style={{ cursor: readOnly ? 'default' : 'pointer' }}
       >
+        {/* Condition border ring */}
         <rect
           x={margin}
           y={margin}

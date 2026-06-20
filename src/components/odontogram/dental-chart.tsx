@@ -15,6 +15,7 @@ import { getUpperArch, getLowerArch, type ToothData } from './tooth-data'
 import { OdontogramLegend } from './odontogram-legend'
 import { ToothDetailPanel } from './tooth-detail-panel'
 import { ToothSvg } from './tooth-svg'
+import type { Tables } from '@/types/database'
 
 interface DentalChartProps {
   patientId: string
@@ -58,6 +59,7 @@ function ToothRow({
                   isUpper={isUpper}
                   readOnly={readOnly}
                   size={34}
+                  treatmentTypeCode={toothTreatmentMap[tooth.number]}
                   onSurfaceClick={() => {
                     chart.selectTooth(tooth.number)
                   }}
@@ -191,6 +193,7 @@ export function DentalChart({
             toothState={chart.selectedToothState}
             isPrimary={initialIsPrimary}
             readOnly={readOnly}
+            toothTreatments={selectedToothTreatments}
             onConditionChange={(cond) =>
               chart.setToothCondition(chart.selectedTooth!, cond)
             }

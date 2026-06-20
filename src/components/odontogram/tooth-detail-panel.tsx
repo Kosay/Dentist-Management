@@ -28,12 +28,23 @@ import {
 } from './tooth-data'
 import type { ToothState } from '@/hooks/use-dental-chart'
 import { ToothXraySection } from './tooth-xray-section'
+import { TreatmentForm } from '@/components/treatments/treatment-form'
+import type { Tables, TreatmentStatus } from '@/types/database'
+
+const STATUS_COLORS: Record<TreatmentStatus, string> = {
+  planned: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400',
+  in_progress: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400',
+  cancelled: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400',
+}
 
 interface ToothDetailPanelProps {
   patientId: string
   tooth: ToothData
   toothState: ToothState
   readOnly?: boolean
+  isPrimary?: boolean
+  toothTreatments?: Tables<'treatment_plans'>[]
   onConditionChange: (condition: ToothCondition) => void
   onSurfaceConditionChange: (surface: ToothSurface, condition: ToothCondition) => void
   onNotesChange: (notes: string) => void
@@ -64,11 +75,12 @@ export function ToothDetailPanel({
   toothState,
   readOnly = false,
   isPrimary = false,
+  toothTreatments = [],
   onConditionChange,
   onSurfaceConditionChange,
   onNotesChange,
   onClose,
-}: ToothDetailPanelProps & { isPrimary?: boolean }) {
+}: ToothDetailPanelProps) {
   const t = useTranslations('odontogram')
   const tt = useTranslations('treatments')
   const tc = useTranslations('common')
@@ -92,6 +104,10 @@ export function ToothDetailPanel({
     toothState.condition === 'missing' ||
     toothState.condition === 'implant_planned' ||
     toothState.condition === 'denture_planned'
+
+  const [addTreatmentOpen, setAddTreatmentOpen] = useState(false)
+
+  const isMissing = toothState.condition === 'missing'
 
   return (
     <>

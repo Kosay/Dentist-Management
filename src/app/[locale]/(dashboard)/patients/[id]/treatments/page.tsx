@@ -21,6 +21,7 @@ import { TreatmentForm } from '@/components/treatments/treatment-form'
 import { TreatmentCard } from '@/components/treatments/treatment-card'
 import { useTreatmentPlans, useUpdateTreatmentPlan } from '@/hooks/use-treatments'
 import { getTreatmentTypeLabel } from '@/lib/treatment-types'
+import { getToothFDILabel } from '@/components/odontogram/tooth-data'
 import type { Tables, TreatmentStatus } from '@/types/database'
 import { cn } from '@/lib/utils'
 
@@ -94,7 +95,7 @@ export default function TreatmentsPage() {
       label: t('tooth'),
       render: (item) =>
         item.tooth_number ? (
-          <span className="font-mono font-semibold">#{item.tooth_number}</span>
+          <span className="font-mono font-semibold">{getToothFDILabel(item.tooth_number as number)}</span>
         ) : (
           '—'
         ),

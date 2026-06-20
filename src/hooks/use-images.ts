@@ -98,21 +98,34 @@ export function useUploadImage() {
         fileName
       )
 
-      const { error: uploadError } = await supabase.storage
-        .from(PATIENT_FILES_BUCKET)
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type || undefined,
-        })
+      // Use R2 if the API route is reachable (R2 env vars configured server-side),
+      // otherwise fall back to Supabase Storage.
+      let usedStoragePath = storagePath
+      try {
+        await uploadToR2(storagePath, file)
+        // R2 upload succeeded — storagePath is already the R2 key
+      } catch (r2Error) {
+        // If the upload-url API returns 500 because R2 isn't configured, fall back
+        const isNotConfigured =
+          r2Error instanceof Error && r2Error.message.includes('not configured')
+        if (!isNotConfigured) throw r2Error
 
-      if (uploadError) throw uploadError
+        const { error: uploadError } = await supabase.storage
+          .from(PATIENT_FILES_BUCKET)
+          .upload(storagePath, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || undefined,
+          })
+        if (uploadError) throw uploadError
+      }
+      usedStoragePath = storagePath
 
       const record: PatientImageInsert = {
         clinic_id: clinic.id,
         patient_id: patientId,
         uploaded_by: user.id,
-        file_url: storagePath,
+        file_url: usedStoragePath,
         file_name: file.name,
         file_size: file.size,
         mime_type: file.type || 'application/octet-stream',

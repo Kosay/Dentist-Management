@@ -153,3 +153,24 @@ export function getDisplayQuadrantLabel(quadrant: number, isPrimary: boolean): n
   }
   return quadrant
 }
+
+const TREATMENT_TYPE_CODES: Record<string, string> = {
+  crown: 'Cr',
+  bridge: 'Br',
+  implant: 'Im',
+  root_canal: 'RC',
+  veneer: 'Ve',
+  denture: 'De',
+}
+
+export function getTreatmentTypeCode(treatmentType: string): string | undefined {
+  return TREATMENT_TYPE_CODES[treatmentType]
+}
+
+export function getToothFDILabel(toothNumber: number | null): string {
+  if (!toothNumber) return '—'
+  const allTeeth = toothNumber >= 51 ? PRIMARY_TEETH : PERMANENT_TEETH
+  const tooth = allTeeth.find((t) => t.number === toothNumber)
+  if (!tooth) return `#${toothNumber}`
+  return `${toothNumber} (${tooth.displayLabel})`
+}

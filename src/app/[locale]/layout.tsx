@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import { Toaster } from '@/components/ui/sonner';
 import { AppProviders } from '@/providers/app-providers';
 import { locales, type Locale } from '@/lib/i18n';
+import AuthProvider from '@/providers/auth-provider';
+import QueryProvider from '@/providers/query-provider';
 import '../globals.css';
 
 const inter = Inter({

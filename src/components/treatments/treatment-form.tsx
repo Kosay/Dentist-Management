@@ -19,7 +19,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -35,6 +38,11 @@ import {
   getTreatmentTypeLabel,
   normalizeTreatmentType,
 } from '@/lib/treatment-types'
+import {
+  PERMANENT_TEETH,
+  PRIMARY_TEETH,
+  getTeethByQuadrant,
+} from '@/components/odontogram/tooth-data'
 import type { Tables, TreatmentStatus, ToothSurface } from '@/types/database'
 
 const SURFACES: ToothSurface[] = [
@@ -53,6 +61,20 @@ const STATUSES: TreatmentStatus[] = [
   'cancelled',
 ]
 
+// Build grouped tooth options from FDI tooth data
+const PERMANENT_QUADRANT_LABELS: Record<number, string> = {
+  1: 'Upper Right',
+  2: 'Upper Left',
+  3: 'Lower Left',
+  4: 'Lower Right',
+}
+const PRIMARY_QUADRANT_LABELS: Record<number, string> = {
+  5: 'Primary Upper Right',
+  6: 'Primary Upper Left',
+  7: 'Primary Lower Left',
+  8: 'Primary Lower Right',
+}
+
 interface FormValues {
   tooth_number?: number
   surfaces: string[]
@@ -70,6 +92,7 @@ interface TreatmentFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   patientId: string
+  initialToothNumber?: number
   treatment?: Tables<'treatment_plans'>
   defaultToothNumber?: number
 }
@@ -78,6 +101,7 @@ export function TreatmentForm({
   open,
   onOpenChange,
   patientId,
+  initialToothNumber,
   treatment,
   defaultToothNumber,
 }: TreatmentFormProps) {
@@ -92,7 +116,7 @@ export function TreatmentForm({
 
   const form = useForm<FormValues>({
     defaultValues: {
-      tooth_number: undefined,
+      tooth_number: initialToothNumber,
       surfaces: [],
       diagnosis: '',
       treatment_type: '',
