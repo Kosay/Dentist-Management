@@ -59,7 +59,7 @@ function ToothRow({
                   isUpper={isUpper}
                   readOnly={readOnly}
                   size={34}
-                  treatmentTypeCode={toothTreatmentMap[tooth.number]}
+                  treatmentTypeCode={treatmentCodes.get(tooth.number)}
                   onSurfaceClick={() => {
                     chart.selectTooth(tooth.number)
                   }}
@@ -193,7 +193,6 @@ export function DentalChart({
             toothState={chart.selectedToothState}
             isPrimary={initialIsPrimary}
             readOnly={readOnly}
-            toothTreatments={selectedToothTreatments}
             onConditionChange={(cond) =>
               chart.setToothCondition(chart.selectedTooth!, cond)
             }

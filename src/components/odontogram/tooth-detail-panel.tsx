@@ -28,7 +28,6 @@ import {
 } from './tooth-data'
 import type { ToothState } from '@/hooks/use-dental-chart'
 import { ToothXraySection } from './tooth-xray-section'
-import { TreatmentForm } from '@/components/treatments/treatment-form'
 import type { Tables, TreatmentStatus } from '@/types/database'
 
 const STATUS_COLORS: Record<TreatmentStatus, string> = {
@@ -44,7 +43,6 @@ interface ToothDetailPanelProps {
   toothState: ToothState
   readOnly?: boolean
   isPrimary?: boolean
-  toothTreatments?: Tables<'treatment_plans'>[]
   onConditionChange: (condition: ToothCondition) => void
   onSurfaceConditionChange: (surface: ToothSurface, condition: ToothCondition) => void
   onNotesChange: (notes: string) => void
@@ -75,7 +73,6 @@ export function ToothDetailPanel({
   toothState,
   readOnly = false,
   isPrimary = false,
-  toothTreatments = [],
   onConditionChange,
   onSurfaceConditionChange,
   onNotesChange,

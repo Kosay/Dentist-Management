@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { syncTreatmentToOdontogram } from '@/lib/dental-chart-service'
 import { useAuth } from '@/providers/auth-provider'
-import { syncTreatmentToOdontogram } from '@/lib/dental-chart-service'
 import type { Tables, InsertTables, UpdateTables } from '@/types/database'
 
 type TreatmentPlan = Tables<'treatment_plans'>
