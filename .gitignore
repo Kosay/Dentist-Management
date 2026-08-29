@@ -24,8 +24,9 @@
 .DS_Store
 *.pem
 
-# Claude Code
-.claude/
+# Claude Code — ignore session data but track shared agent skills
+.claude/*
+!.claude/agents/
 
 # debug
 npm-debug.log*
